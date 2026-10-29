@@ -98,6 +98,47 @@ test("cash payment settles the invoice", async () => {
   await expect(page.getByTestId("outstanding")).toHaveText(/0,00\s?DH/);
 });
 
+test("an invoiced delivery note can be opened but not corrected", async () => {
+  await page.goto("/receiving");
+  await page.getByRole("link", { name: /BL-E2E-1/ }).filter({ hasText: supplier }).click();
+  await expect(page.getByRole("cell", { name: "Crème hydratante 50 ml" }).first()).toBeVisible();
+  await expect(page.getByText(/Une facture fournisseur inclut ce bon/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Annuler la livraison" })).toHaveCount(0);
+});
+
+test("a delivery note is corrected, then cancelled", async () => {
+  await page.goto("/receiving/new");
+  await chooseSupplier();
+  await page.getByLabel("N° du bon de livraison").fill("BL-E2E-2");
+  const picker = page.getByRole("searchbox", { name: "Scanner ou rechercher un produit" });
+  await picker.fill("6111000000014");
+  await picker.press("Enter");
+  await page.getByLabel("Reçus").fill("2");
+  await page.getByLabel("N° de lot").fill(`M${Date.now().toString(36)}`);
+  await page.getByLabel("Péremption").fill(nextYear);
+  await page.getByLabel("Prix TTC").fill("120,00");
+  await page.getByRole("button", { name: /Valider la réception/ }).click();
+  await expect(page).toHaveURL(/\/receiving$/);
+
+  await page.getByRole("link", { name: /BL-E2E-2/ }).filter({ hasText: supplier }).click();
+  await page.getByRole("link", { name: "Corriger" }).click();
+  await expect(page.getByRole("heading", { name: /Corriger la livraison/ })).toBeVisible();
+  await expect(page.getByLabel("Reçus")).toHaveValue("2");
+  await page.getByLabel("Reçus").fill("3");
+  await page.getByRole("button", { name: /Enregistrer la correction/ }).click();
+  await expect(page.getByText("Livraison corrigée : stock et coûts mis à jour.")).toBeVisible();
+  await expect(page.getByText(/Corrige le bon/)).toBeVisible();
+  await expect(page.getByRole("cell", { name: "3", exact: true }).first()).toBeVisible();
+  await page.screenshot({ path: "test-results/shots/receipt-corrected.png", fullPage: true });
+
+  await page.getByRole("button", { name: "Annuler la livraison" }).click();
+  await page.getByLabel("Motif").fill("Saisie en double");
+  await page.getByRole("dialog").getByRole("button", { name: "Annuler la livraison" }).click();
+  await expect(page.getByText("Bon de livraison annulé.")).toBeVisible();
+  await expect(page.getByText("Annulée").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Corriger" })).toHaveCount(0);
+});
+
 test("phone receiving layout", async () => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/receiving/new");

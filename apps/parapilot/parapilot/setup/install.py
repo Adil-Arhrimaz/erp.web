@@ -244,6 +244,16 @@ CUSTOM_FIELDS = {
 			"no_copy": 1,
 			"insert_after": "supplier_delivery_note",
 		},
+		{
+			"fieldname": "pp_corrects",
+			"fieldtype": "Link",
+			"options": "Purchase Receipt",
+			"label": "Corrects Delivery Note",
+			"description": "The delivery note this one replaces; it was cancelled when this one was recorded.",
+			"read_only": 1,
+			"no_copy": 1,
+			"insert_after": "pp_damage_return",
+		},
 	],
 	"POS Invoice": [
 		{

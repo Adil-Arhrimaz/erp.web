@@ -232,3 +232,95 @@ class TestPurchasing(ParaPilotTestCase):
 		purchasing.submit_invoice(invoice["name"])
 		row = supplier_row()
 		self.assertEqual((row["to_invoice_ttc"], row["invoices"], row["invoiced_ht"], row["invoiced_vat"]), (0, 1, 200, 40))
+
+	def receive(self, qty=2, rate=120, lot="LOT-C-1", note="BL-C-1"):
+		return purchasing.submit_receipt(
+			{
+				"supplier": self.supplier,
+				"supplier_delivery_note": note,
+				"lines": [{"item_code": self.cream, "qty": qty, "rate": rate, "lot": lot, "expiry_date": add_months(today(), 12)}],
+			}
+		)["name"]
+
+	def issue(self, qty, batch):
+		entry = frappe.get_doc(
+			{
+				"doctype": "Stock Entry",
+				"stock_entry_type": "Material Issue",
+				"company": self.company,
+				"items": [{"item_code": self.cream, "qty": qty, "s_warehouse": self.settings.shop_floor_warehouse, "batch_no": batch, "use_serial_batch_fields": 1}],
+			}
+		)
+		entry.insert()
+		entry.submit()
+
+	def test_correct_a_delivery_note_after_part_was_sold(self):
+		"""2 creams received at 120 were really 3 at 110; one is already gone. The correction replaces the
+		delivery note at its original date and the lot keeps what is left."""
+		name = self.receive()
+		self.issue(1, "LOT-C-1")
+		draft = purchasing.get_receipt_draft(correct=name)
+		self.assertEqual(draft["corrects"], name)
+		self.assertEqual([(l["qty"], l["lot"], l["rate"]) for l in draft["lines"]], [(2, "LOT-C-1", 120)])
+
+		line = {**draft["lines"][0], "qty": 3, "rate": 110}
+		corrected = purchasing.submit_receipt({"supplier": self.supplier, "supplier_delivery_note": "BL-C-1", "corrects": name, "lines": [line]})["name"]
+		original = purchasing.get_receipt(name)
+		self.assertEqual(original["docstatus"], 2)
+		self.assertEqual(original["corrected_by"], corrected)
+		new = purchasing.get_receipt(corrected)
+		self.assertEqual((new["corrects"], new["posting_date"], new["lines"][0]["qty"]), (name, original["posting_date"], 3))
+		self.assertEqual(new["totals"]["ttc"], 330)
+		from erpnext.stock.doctype.batch.batch import get_batch_qty
+
+		self.assertEqual(get_batch_qty("LOT-C-1", self.settings.shop_floor_warehouse), 2)
+
+	def test_cancel_a_delivery_note_recorded_by_mistake(self):
+		name = self.receive(note="BL-C-2", lot="LOT-C-2")
+		before = self.stock(self.settings.shop_floor_warehouse)
+		receipt = purchasing.cancel_receipt(name, "Saisie en double")
+		self.assertEqual(receipt["docstatus"], 2)
+		self.assertEqual(receipt["blocked"], "cancelled")
+		self.assertEqual(before - self.stock(self.settings.shop_floor_warehouse), 2)
+		listed = next(r for r in purchasing.list_receipts(self.supplier) if r.name == name)
+		self.assertEqual(listed.docstatus, 2)
+
+	def test_cannot_cancel_goods_already_sold(self):
+		name = self.receive(note="BL-C-3", lot="LOT-C-3")
+		self.issue(2, "LOT-C-3")
+		with self.assertRaisesRegex(frappe.ValidationError, "already sold or moved"):
+			purchasing.cancel_receipt(name, "Erreur")
+
+	def test_invoiced_delivery_note_cannot_be_corrected(self):
+		name = self.receive(note="BL-C-4", lot="LOT-C-4")
+		lines = purchasing.preview_invoice(self.supplier, [name])["lines"]
+		purchasing.save_invoice({"supplier": self.supplier, "bill_no": "FA-C-4", "receipts": [name], "lines": lines})
+		self.assertEqual(purchasing.get_receipt(name)["blocked"], "invoiced")
+		with self.assertRaisesRegex(frappe.ValidationError, "supplier invoice includes"):
+			purchasing.cancel_receipt(name, "Erreur")
+
+	def test_correcting_an_old_delivery_note_adds_the_vat(self):
+		"""A delivery note typed in ERPNext without VAT, partly sold: the correction values it without VAT."""
+		from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import repost_entries
+
+		frappe.get_doc({"doctype": "Batch", "batch_id": "_TEST-OLD-C", "item": self.cream, "expiry_date": add_months(today(), 12)}).insert()
+		old = frappe.get_doc(
+			{
+				"doctype": "Purchase Receipt",
+				"company": self.company,
+				"supplier": self.supplier,
+				"set_warehouse": self.settings.shop_floor_warehouse,
+				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": "_TEST-OLD-C", "use_serial_batch_fields": 1}],
+			}
+		).insert()
+		old.submit()
+		self.issue(1, "_TEST-OLD-C")
+		self.assertFalse(purchasing.get_receipt(old.name)["vat_included"])
+
+		draft = purchasing.get_receipt_draft(correct=old.name)
+		corrected = purchasing.submit_receipt({"supplier": self.supplier, "corrects": old.name, "lines": draft["lines"]})["name"]
+		repost_entries()
+		new = purchasing.get_receipt(corrected)
+		self.assertTrue(new["vat_included"])
+		self.assertEqual(new["totals"]["vat"], 40)
+		self.assertEqual(frappe.db.get_value("Purchase Receipt Item", {"parent": corrected}, "valuation_rate"), 100)

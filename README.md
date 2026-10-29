@@ -60,7 +60,9 @@ The ERPNext tests run on the dev site and roll back everything they create.
 - **Purchasing**: purchase order → delivery note (Purchase Receipt: lot and expiry per line, free units at zero
   cost in the same batch, damaged units to Quarantaine with a draft return) → supplier invoice (several
   delivery notes at once, lines more than 1 % off the delivery note highlighted, our-ICE check) → payment
-  (cash limits of 5 000 DH/day and 50 000 DH/month per supplier, with the VAT at risk). Overheads are
+  (cash limits of 5 000 DH/day and 50 000 DH/month per supplier, with the VAT at risk). An owner or manager can
+  correct a delivery note not yet invoiced (it is replaced at its original date, so the cost of what was sold
+  since is recomputed) or cancel it if its goods are still in stock. Overheads are
   invoiced on non-stock items in "Frais généraux", each with its CGNC expense account.
 - **Stock**: quantities per location and value at cost from the batch ledger; expiry board (expired, 30, 60,
   90 days); transfers (Material Transfer, first-expired-first-out); write-offs (Material Issue) with one

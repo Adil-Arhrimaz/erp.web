@@ -79,7 +79,54 @@ export interface ReceiptDraft {
   supplier: string | null;
   supplier_name?: string;
   purchase_order: string | null;
-  lines: (ReceivingItem & { purchase_order_item: string; ordered_qty: number; qty: number })[];
+  /** Set when the draft corrects a recorded delivery note: its lines, lots and prices. */
+  corrects: string | null;
+  supplier_delivery_note?: string | null;
+  warehouse?: string;
+  lines: (ReceivingItem & {
+    purchase_order_item: string | null;
+    ordered_qty?: number;
+    qty: number;
+    free_qty?: number;
+    damaged_qty?: number;
+    lot?: string;
+    expiry_date?: string;
+  })[];
+}
+
+export interface ReceiptLine {
+  item_code: string;
+  item_name: string;
+  qty: number;
+  free_qty: number;
+  damaged_qty: number;
+  lot: string;
+  expiry_date: string;
+  /** Missing for people who cannot see costs. */
+  rate?: number;
+}
+
+export interface ReceiptDetail {
+  name: string;
+  supplier: string;
+  supplier_name: string;
+  supplier_delivery_note: string | null;
+  posting_date: string;
+  posting_time: string;
+  docstatus: 0 | 1 | 2;
+  status: string;
+  received_by: string;
+  warehouse: string | null;
+  /** False for delivery notes typed in ERPNext without the purchase VAT template. */
+  vat_included: boolean;
+  lines: ReceiptLine[];
+  totals: Totals | null;
+  invoices: string[];
+  damage_return: string | null;
+  corrects: string | null;
+  corrected_by: string | null;
+  blocked: "cancelled" | "not_a_delivery" | "invoiced" | "returned" | null;
+  can_correct: boolean;
 }
 
 export interface ReceiptRow {
@@ -90,7 +137,10 @@ export interface ReceiptRow {
   posting_date: string;
   status: string;
   per_billed: number;
+  docstatus: 1 | 2;
   pp_damage_return: string | null;
+  pp_corrects: string | null;
+  taxes_and_charges: string | null;
   grand_total?: number;
 }
 

@@ -23,6 +23,8 @@ const METHODS: Record<string, "GET" | "POST"> = {
   "purchasing.get_receipt_draft": "GET",
   "purchasing.find_receiving_item": "GET",
   "purchasing.submit_receipt": "POST",
+  "purchasing.get_receipt": "GET",
+  "purchasing.cancel_receipt": "POST",
   "purchasing.list_invoices": "GET",
   "purchasing.open_receipts": "GET",
   "purchasing.preview_invoice": "GET",

@@ -18,6 +18,8 @@ from parapilot.api.catalog import _item_vat
 from parapilot.utils import can_see_costs, get_app_roles, get_settings, get_template_rate, require_app_role
 
 PRICE_TOLERANCE = 0.01  # invoice lines more than 1 % away from the delivery note are highlighted
+# Who may correct or cancel a delivery note once recorded.
+RECEIPT_CORRECTORS = ("owner", "manager")
 SHORT_EXPIRY_MONTHS = 6
 
 
@@ -300,18 +302,31 @@ def submit_purchase_order(name: str) -> dict:
 @frappe.whitelist()
 def list_receipts(supplier: str | None = None) -> list[dict]:
 	frappe.has_permission("Purchase Receipt", "read", throw=True)
-	filters: dict = {"docstatus": 1, "is_return": 0}
+	filters: dict = {"docstatus": ["in", [1, 2]], "is_return": 0}
 	if supplier:
 		filters["supplier"] = supplier
-	fields = ["name", "supplier", "supplier_name", "supplier_delivery_note", "posting_date", "status", "per_billed", "pp_damage_return"]
+	fields = [
+		"name",
+		"supplier",
+		"supplier_name",
+		"supplier_delivery_note",
+		"posting_date",
+		"status",
+		"docstatus",
+		"per_billed",
+		"pp_damage_return",
+		"pp_corrects",
+		"taxes_and_charges",
+	]
 	if can_see_costs():
 		fields.append("grand_total")
 	return frappe.get_list("Purchase Receipt", filters=filters, fields=fields, order_by="posting_date desc, creation desc", limit_page_length=200)
 
 
 @frappe.whitelist()
-def get_receipt_draft(purchase_order: str | None = None) -> dict:
-	"""Lines still to receive on an order, priced as ordered; or an empty receipt."""
+def get_receipt_draft(purchase_order: str | None = None, correct: str | None = None) -> dict:
+	"""Lines still to receive on an order, priced as ordered; the lines of a delivery note to correct;
+	or an empty receipt."""
 	settings = get_settings()
 	result = {
 		"warehouses": [
@@ -321,7 +336,28 @@ def get_receipt_draft(purchase_order: str | None = None) -> dict:
 		"lines": [],
 		"supplier": None,
 		"purchase_order": None,
+		"corrects": None,
 	}
+	if correct:
+		require_app_role(*RECEIPT_CORRECTORS)
+		pr = frappe.get_doc("Purchase Receipt", correct)
+		_check_correctable(pr)
+		vat = _vat_rates([i.item_code for i in pr.items])
+		result.update(
+			{
+				"supplier": pr.supplier,
+				"supplier_name": pr.supplier_name,
+				"supplier_delivery_note": pr.supplier_delivery_note,
+				"warehouse": pr.set_warehouse or pr.items[0].warehouse,
+				"purchase_order": next((i.purchase_order for i in pr.items if i.purchase_order), None),
+				"corrects": pr.name,
+				"lines": [
+					{**line, "vat_rate": vat.get(line["item_code"]), "has_batch_no": frappe.get_cached_value("Item", line["item_code"], "has_batch_no")}
+					for line in _editor_lines(pr)
+				],
+			}
+		)
+		return result
 	if purchase_order:
 		po = frappe.get_doc("Purchase Order", purchase_order)
 		po.check_permission("read")
@@ -370,8 +406,6 @@ def _batch_for(item_code: str, lot: str, expiry_date: str | None, supplier: str)
 	lot = lot.strip()
 	if not lot:
 		frappe.throw(_("Enter the lot number for {0}.").format(frappe.get_cached_value("Item", item_code, "item_name")))
-	if expiry_date and getdate(expiry_date) < getdate(today()):
-		frappe.throw(_("Lot {0} is already expired ({1}).").format(lot, frappe.format(expiry_date, "Date")))
 	for name in (lot, f"{item_code}-{lot}"):
 		existing = frappe.db.get_value("Batch", name, ["item", "expiry_date"], as_dict=True)
 		if existing and existing.item == item_code:
@@ -379,6 +413,9 @@ def _batch_for(item_code: str, lot: str, expiry_date: str | None, supplier: str)
 				frappe.throw(_("Lot {0} is already recorded with another expiry date.").format(lot))
 			return name
 		if not existing:
+			# A lot seen before may have expired since (a delivery corrected later); a new one may not.
+			if expiry_date and getdate(expiry_date) < getdate(today()):
+				frappe.throw(_("Lot {0} is already expired ({1}).").format(lot, frappe.format(expiry_date, "Date")))
 			return (
 				frappe.get_doc(
 					{
@@ -408,6 +445,14 @@ def submit_receipt(receipt: str | dict) -> dict:
 		frappe.throw(_("Choose a supplier and scan at least one product."))
 	warehouse = data.warehouse or settings.shop_floor_warehouse
 
+	original = None
+	if data.corrects:
+		require_app_role(*RECEIPT_CORRECTORS)
+		original = frappe.get_doc("Purchase Receipt", data.corrects)
+		_check_correctable(original)
+		if original.supplier != data.supplier:
+			frappe.throw(_("A correction keeps the supplier. Cancel the delivery note and record a new one instead."))
+
 	pr = _new_buying_doc("Purchase Receipt", data.supplier)
 	pr.update(
 		{
@@ -416,6 +461,15 @@ def submit_receipt(receipt: str | dict) -> dict:
 			"rejected_warehouse": settings.quarantine_warehouse,
 		}
 	)
+	if original:
+		# Same date and time as the delivery it replaces, so what was sold since still came from it.
+		pr.update(
+			{
+				"set_posting_time": 1,
+				"posting_date": original.posting_date,
+				"posting_time": original.posting_time,
+			}
+		)
 	rates: list[float | None] = []
 	for line in lines:
 		has_batch = cint(frappe.get_cached_value("Item", line.item_code, "has_batch_no"))
@@ -445,8 +499,18 @@ def submit_receipt(receipt: str | dict) -> dict:
 			rates.append(0)
 	pr.set_missing_values()
 	_apply_ttc_rates(pr, rates)
+	ordered = original and any(i.purchase_order_item for i in original.items)
+	if ordered:
+		# Received quantities on the order would otherwise count both delivery notes for a moment.
+		_cancel_receipt(original)
 	pr.insert()
 	pr.submit()
+	if original and not ordered:
+		_cancel_receipt(original)
+	if original:
+		# Linked after the cancellation: ERPNext refuses to cancel a document another one points to.
+		pr.db_set("pp_corrects", original.name)
+		_repost_soon()
 
 	for line in lines:
 		if flt(line.rate) > 0:
@@ -465,6 +529,159 @@ def submit_receipt(receipt: str | dict) -> dict:
 		if l.expiry_date and getdate(l.expiry_date) < getdate(add_months(today(), SHORT_EXPIRY_MONTHS))
 	]
 	return {"name": pr.name, "damage_return": pr.get("pp_damage_return"), "warnings": warnings}
+
+
+def _receipt_invoices(name: str) -> list[str]:
+	return frappe.db.sql_list(
+		"""select distinct pi.name from `tabPurchase Invoice Item` pii
+		join `tabPurchase Invoice` pi on pi.name = pii.parent
+		where pii.purchase_receipt = %s and pi.docstatus < 2""",
+		name,
+	)
+
+
+def _correction_blocked(pr) -> str | None:
+	"""Why a delivery note can no longer be corrected or cancelled, as a code the screen explains."""
+	if pr.docstatus == 2:
+		return "cancelled"
+	if pr.docstatus == 0 or pr.is_return:
+		return "not_a_delivery"
+	if _receipt_invoices(pr.name):
+		return "invoiced"
+	if frappe.db.exists("Purchase Receipt", {"return_against": pr.name, "is_return": 1, "docstatus": 1}):
+		return "returned"
+	return None
+
+
+def _check_correctable(pr):
+	pr.check_permission("cancel")
+	reason = _correction_blocked(pr)
+	messages = {
+		"cancelled": _("This delivery note is already cancelled."),
+		"not_a_delivery": _("Only a recorded delivery note can be corrected."),
+		"invoiced": _("A supplier invoice includes this delivery note. Correct the invoice or record a credit note instead."),
+		"returned": _("Goods from this delivery note were sent back to the supplier. Cancel that return first."),
+	}
+	if reason:
+		frappe.throw(messages[reason])
+
+
+def _receipt_batch(row) -> str | None:
+	if row.batch_no:
+		return row.batch_no
+	if row.serial_and_batch_bundle:
+		return frappe.db.get_value("Serial and Batch Entry", {"parent": row.serial_and_batch_bundle}, "batch_no")
+	return None
+
+
+def _editor_lines(pr) -> list[dict]:
+	"""The delivery note as the receiving screen enters it: one line per product and lot, with paid,
+	free and damaged quantities."""
+	lines: dict[tuple, dict] = {}
+	for row in pr.items:
+		batch = _receipt_batch(row)
+		lot = batch and frappe.db.get_value("Batch", batch, ["description", "batch_id", "expiry_date"], as_dict=True)
+		line = lines.setdefault(
+			(row.item_code, batch, row.purchase_order_item if not row.is_free_item else None),
+			{
+				"item_code": row.item_code,
+				"item_name": row.item_name,
+				"purchase_order_item": None,
+				"qty": 0,
+				"free_qty": 0,
+				"damaged_qty": 0,
+				"lot": (lot.description or lot.batch_id) if lot else "",
+				"expiry_date": str(lot.expiry_date) if lot and lot.expiry_date else "",
+				"rate": 0,
+			},
+		)
+		if row.is_free_item:
+			line["free_qty"] += flt(row.qty)
+		else:
+			line["qty"] += flt(row.qty)
+			line["damaged_qty"] += flt(row.rejected_qty)
+			line["rate"] = flt(row.rate, 2)
+			line["purchase_order_item"] = row.purchase_order_item
+	return list(lines.values())
+
+
+def _drop_draft_damage_return(pr):
+	if pr.pp_damage_return and frappe.db.get_value("Purchase Receipt", pr.pp_damage_return, "docstatus") == 0:
+		frappe.delete_doc("Purchase Receipt", pr.pp_damage_return, ignore_permissions=True)
+
+
+def _cancel_receipt(pr):
+	from erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle import BatchNegativeStockError
+	from erpnext.stock.stock_ledger import NegativeStockError
+
+	_drop_draft_damage_return(pr)
+	try:
+		pr.cancel()
+	except (NegativeStockError, BatchNegativeStockError):
+		frappe.throw(
+			_("Part of these goods was already sold or moved, so the delivery note cannot be cancelled. Correct it with at least the quantities sold, or record a supplier return.")
+		)
+
+
+def _repost_soon():
+	"""Recompute the cost of what was sold since the delivery now, rather than at the next hourly run."""
+	frappe.enqueue(
+		"erpnext.stock.doctype.repost_item_valuation.repost_item_valuation.repost_entries",
+		queue="long",
+		enqueue_after_commit=True,
+	)
+
+
+@frappe.whitelist()
+def get_receipt(name: str) -> dict:
+	"""A delivery note: what arrived (lots, expiry, free and damaged units), its VAT and totals, the invoices
+	that cover it, and whether it can still be corrected."""
+	pr = frappe.get_doc("Purchase Receipt", name)
+	pr.check_permission("read")
+	show_costs = can_see_costs()
+	blocked = _correction_blocked(pr)
+	may_correct = bool({*RECEIPT_CORRECTORS} & set(get_app_roles()))
+	lines = []
+	for line in _editor_lines(pr):
+		if not show_costs:
+			line.pop("rate")
+		lines.append(line)
+	return {
+		"name": pr.name,
+		"supplier": pr.supplier,
+		"supplier_name": pr.supplier_name,
+		"supplier_delivery_note": pr.supplier_delivery_note,
+		"posting_date": str(pr.posting_date),
+		"posting_time": str(pr.posting_time).split(".")[0],
+		"docstatus": pr.docstatus,
+		"status": pr.status,
+		"received_by": frappe.utils.get_fullname(pr.owner),
+		"warehouse": pr.set_warehouse or (pr.items[0].warehouse if pr.items else None),
+		"vat_included": bool(pr.taxes_and_charges),
+		"lines": lines,
+		"totals": _totals(pr) if show_costs else None,
+		"invoices": _receipt_invoices(pr.name),
+		"damage_return": pr.pp_damage_return,
+		"corrects": pr.pp_corrects,
+		"corrected_by": frappe.db.get_value("Purchase Receipt", {"pp_corrects": pr.name, "docstatus": 1}, "name"),
+		"blocked": blocked,
+		"can_correct": may_correct and not blocked,
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def cancel_receipt(name: str, reason: str) -> dict:
+	"""Cancel a delivery note recorded by mistake: its stock leaves and its accounting entries are reversed.
+	It stays in the list as cancelled, with the reason."""
+	require_app_role(*RECEIPT_CORRECTORS)
+	if not (reason or "").strip():
+		frappe.throw(_("Say why the delivery note is cancelled."))
+	pr = frappe.get_doc("Purchase Receipt", name)
+	_check_correctable(pr)
+	_cancel_receipt(pr)
+	pr.add_comment("Comment", _("Cancelled: {0}").format(reason.strip()))
+	_repost_soon()
+	return get_receipt(name)
 
 
 # Supplier invoices -------------------------------------------------------------------------------------
