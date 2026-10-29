@@ -7,13 +7,13 @@ taken over, a sale and a refund were rounded to the dirham, and the till closed 
 ## Before the evening
 
 1. **GitHub**: make the repository private, then open *Actions* and check that the latest `images` run is
-   green. Note its commit tag, for example `sha-f0e9bc4` (shown in the run's `meta` step).
+   green. Note its commit tag, for example `sha-b868222` (shown in the run's `meta` step).
 2. **Server**: let Docker pull from GitHub's registry. Create a token on GitHub (*Settings → Developer
    settings → Personal access tokens → Tokens (classic)*, scope `read:packages` only), then on the server:
    ```bash
    docker login ghcr.io -u Adil-Arhrimaz      # paste the token when asked; never in a chat
-   docker pull ghcr.io/adil-arhrimaz/parapilot-erpnext:sha-f0e9bc4
-   docker pull ghcr.io/adil-arhrimaz/parapilot-web:sha-f0e9bc4
+   docker pull ghcr.io/adil-arhrimaz/parapilot-erpnext:sha-b868222
+   docker pull ghcr.io/adil-arhrimaz/parapilot-web:sha-b868222
    ```
 3. **Cloudflare**: in the tunnel, add the public hostname `app.dermaroutine.ma`, pointing to the same Traefik
    service as `erp.dermaroutine.ma`.
@@ -33,8 +33,8 @@ Commands run on the server. The site name is `erp.dermaroutine.ma` (`SITE_NAME` 
    Note the file names of this backup (database, files, private files): they are the way back.
 3. **New images.** In the stack's `.env` add:
    ```
-   ERPNEXT_IMAGE=ghcr.io/adil-arhrimaz/parapilot-erpnext:sha-f0e9bc4
-   PARAPILOT_WEB_IMAGE=ghcr.io/adil-arhrimaz/parapilot-web:sha-f0e9bc4
+   ERPNEXT_IMAGE=ghcr.io/adil-arhrimaz/parapilot-erpnext:sha-b868222
+   PARAPILOT_WEB_IMAGE=ghcr.io/adil-arhrimaz/parapilot-web:sha-b868222
    APP_HOST=app.dermaroutine.ma
    ```
    Replace the stack file with `deploy/stack.production.yml`. Remove the ERPNext containers with their
