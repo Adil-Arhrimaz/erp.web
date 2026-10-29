@@ -31,7 +31,20 @@ type ReportKey =
   | "purchases_by_supplier";
 
 const COST_REPORTS: ReportKey[] = ["margins", "stock_value"];
-const MONEY = new Set(["amount", "ht", "ttc", "vat", "margin", "cost", "value"]);
+const MONEY = new Set([
+  "amount",
+  "ht",
+  "ttc",
+  "vat",
+  "margin",
+  "cost",
+  "value",
+  "received_ttc",
+  "to_invoice_ttc",
+  "invoiced_ht",
+  "invoiced_vat",
+  "invoiced_ttc",
+]);
 const DATES = new Set(["last_sale", "expiry_date"]);
 const ALL = "__all__";
 

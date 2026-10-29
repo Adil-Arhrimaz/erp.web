@@ -206,3 +206,29 @@ class TestPurchasing(ParaPilotTestCase):
 		purchasing.submit_invoice(invoice["name"])
 		repost_entries()
 		self.assertEqual(frappe.db.get_value("Purchase Receipt Item", receipt.items[0].name, "valuation_rate"), 100)
+
+	def test_purchases_report_shows_deliveries_before_the_invoice(self):
+		"""Suppliers invoice at the end of the month: a delivery counts as soon as it is received."""
+		from parapilot.api import reports
+
+		def supplier_row():
+			rows = reports.run("purchases_by_supplier", {"from_date": today(), "to_date": today()})["rows"]
+			return next(r for r in rows if r["supplier_name"] == "_Test Labo Dermo")
+
+		receipt = purchasing.submit_receipt(
+			{
+				"supplier": self.supplier,
+				"supplier_delivery_note": "BL-RT-1",
+				"lines": [{"item_code": self.cream, "qty": 2, "rate": 120, "lot": "LOT-RT-1", "expiry_date": add_months(today(), 12)}],
+			}
+		)["name"]
+		row = supplier_row()
+		self.assertEqual((row["received_ttc"], row["to_invoice_ttc"], row["invoices"]), (240, 240, 0))
+
+		lines = purchasing.preview_invoice(self.supplier, [receipt])["lines"]
+		invoice = purchasing.save_invoice(
+			{"supplier": self.supplier, "bill_no": "FA-RT-1", "receipts": [receipt], "lines": lines, "pp_company_ice_on_invoice": 1}
+		)
+		purchasing.submit_invoice(invoice["name"])
+		row = supplier_row()
+		self.assertEqual((row["to_invoice_ttc"], row["invoices"], row["invoiced_ht"], row["invoiced_vat"]), (0, 1, 200, 40))

@@ -62,7 +62,10 @@
     "margin": "Margin excl. VAT",
     "margin_rate": "Margin rate",
     "value": "Value at cost",
-    "items": "Products"
+    "items": "Products",
+    "received_ttc": "Delivered incl. VAT",
+    "to_invoice_ttc": "Delivered, not invoiced incl. VAT",
+    "invoiced_ht": "Invoiced excl. VAT"
   },
   "columns": {
     "mode_of_payment": "Payment method",
@@ -83,7 +86,12 @@
     "invoices": "Invoices",
     "lot": "Lot",
     "expiry_date": "Expiry",
-    "location": "Location"
+    "location": "Location",
+    "received_ttc": "Delivered incl. VAT",
+    "to_invoice_ttc": "Delivered, not invoiced incl. VAT",
+    "invoiced_ht": "Invoiced excl. VAT",
+    "invoiced_vat": "VAT on invoices",
+    "invoiced_ttc": "Invoiced incl. VAT"
   },
   "sort": {
     "qty": "Quantity",

@@ -62,7 +62,10 @@
     "margin": "Marge HT",
     "margin_rate": "Taux de marque",
     "value": "Valeur au coût",
-    "items": "Produits"
+    "items": "Produits",
+    "received_ttc": "Livré TTC",
+    "to_invoice_ttc": "Livré non facturé TTC",
+    "invoiced_ht": "Facturé HT"
   },
   "columns": {
     "mode_of_payment": "Moyen de paiement",
@@ -83,7 +86,12 @@
     "invoices": "Factures",
     "lot": "Lot",
     "expiry_date": "Péremption",
-    "location": "Lieu"
+    "location": "Lieu",
+    "received_ttc": "Livré TTC",
+    "to_invoice_ttc": "Livré non facturé TTC",
+    "invoiced_ht": "Facturé HT",
+    "invoiced_vat": "TVA des factures",
+    "invoiced_ttc": "Facturé TTC"
   },
   "sort": {
     "qty": "Quantité",

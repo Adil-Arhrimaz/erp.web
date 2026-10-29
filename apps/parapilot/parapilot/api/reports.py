@@ -254,19 +254,49 @@ def stock_value(f, company):
 
 
 def purchases_by_supplier(f, company):
-	"""Who do I buy from? Amount HT and VAT by supplier (credit notes deducted)."""
-	rows = frappe.db.sql(
-		"""select supplier_name, sum(base_net_total) as ht, sum(base_total_taxes_and_charges) as vat,
-			sum(base_grand_total) as ttc, count(*) as invoices
-		from `tabPurchase Invoice` where docstatus = 1 and company = %s and posting_date between %s and %s
-		group by supplier order by ht desc""",
+	"""Who do I buy from? What was delivered (as soon as it is received) and what was invoiced, by supplier.
+	Suppliers invoice at the end of the month: "not invoiced" is what their next invoices should cover."""
+	rows: dict[str, dict] = {}
+
+	def row(supplier, supplier_name):
+		return rows.setdefault(
+			supplier,
+			{"supplier_name": supplier_name, "received_ttc": 0.0, "to_invoice_ttc": 0.0, "invoices": 0, "invoiced_ht": 0.0, "invoiced_vat": 0.0, "invoiced_ttc": 0.0},
+		)
+
+	for r in frappe.db.sql(
+		# Not invoiced: the delivery note's TTC minus the invoice lines made from it (ERPNext's per_billed
+		# compares amounts without VAT, so it is off with VAT-included prices).
+		"""select pr.supplier, pr.supplier_name, sum(pr.base_grand_total) as ttc,
+			sum(case when pr.is_return = 0 then greatest(pr.base_grand_total - ifnull((
+				select sum(pii.base_amount) from `tabPurchase Invoice Item` pii
+				join `tabPurchase Invoice` pi on pi.name = pii.parent
+				where pi.docstatus = 1 and pi.is_return = 0 and pii.purchase_receipt = pr.name), 0), 0) else 0 end) as to_invoice
+		from `tabPurchase Receipt` pr where pr.docstatus = 1 and pr.company = %s and pr.posting_date between %s and %s
+		group by pr.supplier""",
 		(company, f.from_date, f.to_date),
 		as_dict=True,
-	)
+	):
+		entry = row(r.supplier, r.supplier_name)
+		entry["received_ttc"] = flt(r.ttc, 2)
+		entry["to_invoice_ttc"] = flt(r.to_invoice, 2)
+	for r in frappe.db.sql(
+		"""select supplier, supplier_name, sum(base_net_total) as ht, sum(base_total_taxes_and_charges) as vat,
+			sum(base_grand_total) as ttc, count(*) as invoices
+		from `tabPurchase Invoice` where docstatus = 1 and company = %s and posting_date between %s and %s
+		group by supplier""",
+		(company, f.from_date, f.to_date),
+		as_dict=True,
+	):
+		entry = row(r.supplier, r.supplier_name)
+		entry.update({"invoices": r.invoices, "invoiced_ht": flt(r.ht, 2), "invoiced_vat": flt(r.vat, 2), "invoiced_ttc": flt(r.ttc, 2)})
+
+	result = sorted(rows.values(), key=lambda r: -(r["received_ttc"] or r["invoiced_ttc"]))
+	total = lambda key: flt(sum(r[key] for r in result), 2)  # noqa: E731
 	return {
-		"rows": [{**r, "ht": flt(r.ht, 2), "vat": flt(r.vat, 2), "ttc": flt(r.ttc, 2)} for r in rows],
-		"columns": ["supplier_name", "invoices", "ht", "vat", "ttc"],
-		"kpis": {"ht": flt(sum(flt(r.ht) for r in rows), 2), "vat": flt(sum(flt(r.vat) for r in rows), 2)},
+		"rows": result,
+		"columns": ["supplier_name", "received_ttc", "to_invoice_ttc", "invoices", "invoiced_ht", "invoiced_vat", "invoiced_ttc"],
+		"kpis": {"received_ttc": total("received_ttc"), "to_invoice_ttc": total("to_invoice_ttc"), "invoiced_ht": total("invoiced_ht")},
 	}
 
 
