@@ -72,6 +72,29 @@ services:
       - backend
       - websocket
 
+  # A restored copy of production (site prod-copy.localhost), on its own port:
+  #   docker compose -f deploy/compose.dev.yml --profile copy up -d frontend-copy
+  # Desk: http://localhost:8081; web app: ERPNEXT_URL=http://localhost:8081 npx next start -p 3001
+  frontend-copy:
+    <<: *erpnext
+    profiles: [copy]
+    restart: unless-stopped
+    command: ["nginx-entrypoint.sh"]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: prod-copy.localhost
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - "8081:8080"
+    depends_on:
+      - backend
+      - websocket
+
   websocket:
     <<: [*erpnext, *after_configurator]
     restart: unless-stopped
