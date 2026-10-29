@@ -6,8 +6,12 @@ VAT engine; ParaPilot replaces the daily screens. See the product specification 
 ```
 apps/parapilot/   Frappe app installed in ERPNext: custom fields, roles, Moroccan rules, CGNC chart, API
 web/              Next.js 16 app (counter, back office, phone) + server (BFF) that talks to ERPNext
-deploy/           Local ERPNext 16.52.1 + parapilot in Docker
+deploy/           Local ERPNext 16.52.1 + parapilot in Docker; production stack and cutover guide
 ```
+
+Production: GitHub Actions (`.github/workflows/images.yml`) builds `ghcr.io/adil-arhrimaz/parapilot-erpnext`
+(ERPNext + parapilot, `deploy/Dockerfile`) and `ghcr.io/adil-arhrimaz/parapilot-web` (`web/Dockerfile`) on every
+push to main. The server runs `deploy/stack.production.yml`; `deploy/CUTOVER.md` is the one-evening move.
 
 ## Run locally
 

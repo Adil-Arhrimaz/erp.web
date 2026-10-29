@@ -1,0 +1,423 @@
+# Production stack on the dedicated server (Portainer stack "erpnext"): ERPNext with ParaPilot, the
+# ParaPilot web app and hourly backups to S3. Behind Traefik on edge-network and a Cloudflare Tunnel.
+# Values come from the stack's .env; see deploy/CUTOVER.md for the move to ParaPilot.
+name: erpnext
+
+x-erpnext-image: &erpnext-image
+  # Before the cutover: frappe/erpnext:v16.52.1. After: ghcr.io/adil-arhrimaz/parapilot-erpnext:sha-<commit>.
+  image: ${ERPNEXT_IMAGE:-frappe/erpnext:v16.52.1}
+  # Pull only when the image is missing: a re-pull of the same tag can leave containers
+  # with different asset files (404 on desk.bundle...js). Upgrade on purpose instead.
+  pull_policy: missing
+
+x-erpnext-volumes: &erpnext-volumes
+  - erpnext-sites:/home/frappe/frappe-bench/sites
+  - erpnext-logs:/home/frappe/frappe-bench/logs
+
+x-backend-defaults: &backend-defaults
+  <<: *erpnext-image
+  restart: unless-stopped
+  networks:
+    - erpnext-network
+  volumes: *erpnext-volumes
+  depends_on:
+    configurator:
+      condition: service_completed_successfully
+
+services:
+  # ------------------------------------------------------------
+  # MariaDB
+  # ------------------------------------------------------------
+  db:
+    image: mariadb:11.8
+    container_name: erpnext-db
+    restart: unless-stopped
+    networks:
+      - erpnext-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      # MariaDB 11.6+: otherwise concurrent logins and sales fail with error 1020.
+      - --innodb-snapshot-isolation=OFF
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_AUTO_UPGRADE: "1"
+    volumes:
+      - erpnext-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------------------------------
+  # Redis
+  # ------------------------------------------------------------
+  redis-cache:
+    image: redis:8.6-alpine
+    container_name: erpnext-redis-cache
+    restart: unless-stopped
+    networks:
+      - erpnext-network
+
+  redis-queue:
+    image: redis:8.6-alpine
+    container_name: erpnext-redis-queue
+    restart: unless-stopped
+    networks:
+      - erpnext-network
+    volumes:
+      - erpnext-redis-queue-data:/data
+
+  # ------------------------------------------------------------
+  # Generate common_site_config.json
+  # ------------------------------------------------------------
+  configurator:
+    <<: *erpnext-image
+    container_name: erpnext-configurator
+    restart: "no"
+    networks:
+      - erpnext-network
+    volumes: *erpnext-volumes
+    entrypoint: ["bash", "-lc"]
+    command:
+      - |
+        set -e
+        ls -1 apps > sites/apps.txt
+        bench set-config -g db_host "$${DB_HOST}"
+        bench set-config -gp db_port "$${DB_PORT}"
+        bench set-config -g redis_cache "redis://$${REDIS_CACHE}"
+        bench set-config -g redis_queue "redis://$${REDIS_QUEUE}"
+        bench set-config -g redis_socketio "redis://$${REDIS_QUEUE}"
+        bench set-config -gp socketio_port "$${SOCKETIO_PORT}"
+        bench set-config -g chromium_path /usr/bin/chromium-headless-shell
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      SOCKETIO_PORT: "9000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_started
+      redis-queue:
+        condition: service_started
+
+  # ------------------------------------------------------------
+  # First deployment only: create the site and install ERPNext
+  # Safe to run again because it skips an existing site.
+  # ------------------------------------------------------------
+  create-site:
+    <<: *erpnext-image
+    container_name: erpnext-create-site
+    restart: "no"
+    networks:
+      - erpnext-network
+    volumes: *erpnext-volumes
+    entrypoint: ["bash", "-lc"]
+    command:
+      - |
+        set -e
+        wait-for-it -t 180 db:3306
+        wait-for-it -t 180 redis-cache:6379
+        wait-for-it -t 180 redis-queue:6379
+
+        until [ -s sites/common_site_config.json ]; do
+          echo "Waiting for common_site_config.json..."
+          sleep 5
+        done
+
+        if [ -f "sites/$${SITE_NAME}/site_config.json" ]; then
+          echo "Site $${SITE_NAME} already exists; skipping creation."
+        else
+          bench new-site \
+            --mariadb-user-host-login-scope='%' \
+            --admin-password="$${ADMIN_PASSWORD}" \
+            --db-root-username=root \
+            --db-root-password="$${DB_ROOT_PASSWORD}" \
+            --install-app erpnext \
+            --set-default \
+            "$${SITE_NAME}"
+        fi
+    environment:
+      SITE_NAME: ${SITE_NAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+
+  # ------------------------------------------------------------
+  # ERPNext application services
+  # ------------------------------------------------------------
+  backend:
+    <<: *backend-defaults
+    container_name: erpnext-backend
+    environment:
+      SITE_NAME: ${SITE_NAME}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+
+  frontend:
+    <<: *erpnext-image
+    container_name: erpnext-frontend
+    restart: unless-stopped
+    command: ["nginx-entrypoint.sh"]
+    networks:
+      - erpnext-network
+      - edge-network
+    environment:
+      BACKEND: erpnext-backend:8000
+      SOCKETIO: erpnext-websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${SITE_NAME}
+      UPSTREAM_REAL_IP_ADDRESS: ${UPSTREAM_REAL_IP_ADDRESS:-127.0.0.1}
+      UPSTREAM_REAL_IP_HEADER: ${UPSTREAM_REAL_IP_HEADER:-X-Forwarded-For}
+      UPSTREAM_REAL_IP_RECURSIVE: ${UPSTREAM_REAL_IP_RECURSIVE:-off}
+      PROXY_READ_TIMEOUT: ${PROXY_READ_TIMEOUT:-120}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-100m}
+    volumes: *erpnext-volumes
+    depends_on:
+      - backend
+      - websocket
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge-network"
+
+      # Cloudflare Tunnel sends HTTP to Traefik, while visitors use HTTPS.
+      - "traefik.http.routers.erpnext.rule=Host(`${ERP_HOST:-erp.dermaroutine.ma}`)"
+      - "traefik.http.routers.erpnext.entrypoints=web"
+      - "traefik.http.routers.erpnext.service=erpnext"
+      - "traefik.http.routers.erpnext.middlewares=erpnext-forwarded-https@docker"
+
+      # ERPNext's nginx frontend listens on port 8080 inside the container.
+      - "traefik.http.services.erpnext.loadbalancer.server.port=8080"
+      - "traefik.http.services.erpnext.loadbalancer.passhostheader=true"
+
+      # Preserve the original public HTTPS request information.
+      - "traefik.http.middlewares.erpnext-forwarded-https.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.erpnext-forwarded-https.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.erpnext-forwarded-https.headers.customrequestheaders.X-Forwarded-Host=${ERP_HOST:-erp.dermaroutine.ma}"
+
+  websocket:
+    <<: *backend-defaults
+    container_name: erpnext-websocket
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+  queue-short:
+    <<: *backend-defaults
+    container_name: erpnext-queue-short
+    command: ["bench", "worker", "--queue", "short,default"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+  queue-long:
+    <<: *backend-defaults
+    container_name: erpnext-queue-long
+    command: ["bench", "worker", "--queue", "long,default,short"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+
+  scheduler:
+    <<: *backend-defaults
+    container_name: erpnext-scheduler
+    command: ["bench", "schedule"]
+
+  # ------------------------------------------------------------
+  # Hourly ERPNext backup to S3 with rclone
+  # Includes:
+  #   - MariaDB database
+  #   - public files
+  #   - private files
+  #   - site configuration / encryption key
+  # Keeps objects for 7 days by default.
+  # ------------------------------------------------------------
+  backup:
+    <<: *erpnext-image
+    container_name: erpnext-backup
+    restart: unless-stopped
+    networks:
+      - erpnext-network
+    volumes: *erpnext-volumes
+    environment:
+      SITE_NAME: ${SITE_NAME}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_PREFIX: ${S3_PREFIX:-erpnext/sites}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-3600}
+      RETENTION_DAYS: ${RETENTION_DAYS:-7}
+      RUN_BACKUP_ON_START: ${RUN_BACKUP_ON_START:-true}
+      # Not RCLONE_*: rclone reads every RCLONE_* variable as one of its own flags.
+      BACKUP_RCLONE_VERSION: v1.68.2
+      # rclone reads its S3 settings from these variables (remote name "s3").
+      RCLONE_CONFIG_S3_TYPE: s3
+      RCLONE_CONFIG_S3_PROVIDER: AWS
+      RCLONE_CONFIG_S3_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      RCLONE_CONFIG_S3_REGION: ${AWS_REGION:-eu-central-1}
+      RCLONE_CONFIG_S3_ENDPOINT: ${AWS_ENDPOINT:-https://s3.eu-central-1.amazonaws.com}
+      RCLONE_CONFIG_S3_NO_CHECK_BUCKET: "true"
+    entrypoint: ["bash", "-lc"]
+    command:
+      - |
+        set -Eeuo pipefail
+
+        PY=/home/frappe/frappe-bench/env/bin/python
+        RCLONE=/home/frappe/.local/bin/rclone
+
+        if [ ! -x "$${RCLONE}" ]; then
+          case "$$(uname -m)" in
+            x86_64) arch=amd64 ;;
+            aarch64|arm64) arch=arm64 ;;
+            *) echo "Unsupported CPU: $$(uname -m)"; exit 1 ;;
+          esac
+          name="rclone-$${BACKUP_RCLONE_VERSION}-linux-$${arch}"
+          tmp="$$(mktemp -d)"
+          echo "Installing rclone $${BACKUP_RCLONE_VERSION}..."
+          curl -fsSL "https://downloads.rclone.org/$${BACKUP_RCLONE_VERSION}/$${name}.zip" -o "$${tmp}/$${name}.zip"
+          curl -fsSL "https://downloads.rclone.org/$${BACKUP_RCLONE_VERSION}/SHA256SUMS" -o "$${tmp}/SHA256SUMS"
+          (cd "$${tmp}" && grep " $${name}.zip$$" SHA256SUMS | sha256sum -c -)
+          "$${PY}" -m zipfile -e "$${tmp}/$${name}.zip" "$${tmp}/"
+          mkdir -p "$$(dirname "$${RCLONE}")"
+          install -m 0755 "$${tmp}/$${name}/rclone" "$${RCLONE}"
+          rm -rf "$${tmp}"
+        fi
+        "$${RCLONE}" version | head -1
+
+        echo "Checking bucket access: s3://$${S3_BUCKET}"
+        "$${RCLONE}" lsf "s3:$${S3_BUCKET}" --max-depth 1 > /dev/null
+
+        until [ -f "sites/$${SITE_NAME}/site_config.json" ]; do
+          echo "Waiting for ERPNext site $${SITE_NAME}..."
+          sleep 10
+        done
+
+        run_backup() {
+          local started_at start_epoch ts workdir remote elapsed sleep_for
+          started_at="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          start_epoch="$$(date +%s)"
+          ts="$$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          workdir="/tmp/erpnext-$${SITE_NAME}-$${ts}"
+          remote="s3:$${S3_BUCKET}/$${S3_PREFIX}/$${SITE_NAME}/$${ts}"
+
+          rm -rf "$${workdir}"
+          mkdir -p "$${workdir}"
+
+          echo "------------------------------------------------------------"
+          echo "Starting ERPNext backup: $${ts}"
+          echo "Target: $${remote}/"
+          echo "------------------------------------------------------------"
+
+          bench --site "$${SITE_NAME}" backup \
+            --with-files \
+            --compress \
+            --backup-path "$${workdir}"
+
+          cat > "$${workdir}/manifest.txt" <<EOF
+        site=$${SITE_NAME}
+        created_at_utc=$${started_at}
+        erpnext_image=${ERPNEXT_IMAGE:-frappe/erpnext:v16.52.1}
+        backup_contents=database,public_files,private_files,site_config
+        EOF
+
+          (
+            cd "$${workdir}"
+            find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS
+          )
+
+          echo "Uploading backup to S3..."
+          "$${RCLONE}" copy "$${workdir}" "$${remote}"
+
+          echo "Verifying uploaded files..."
+          "$${RCLONE}" check "$${workdir}" "$${remote}" --one-way
+          "$${RCLONE}" ls "$${remote}"
+
+          rm -rf "$${workdir}"
+
+          if [ "$${RETENTION_DAYS}" != "0" ]; then
+            echo "Deleting backups older than $${RETENTION_DAYS} days..."
+            "$${RCLONE}" delete "s3:$${S3_BUCKET}/$${S3_PREFIX}/$${SITE_NAME}/" --min-age "$${RETENTION_DAYS}d" || true
+          fi
+
+          elapsed="$$(( $$(date +%s) - start_epoch ))"
+          sleep_for="$$(( BACKUP_INTERVAL_SECONDS - elapsed ))"
+          if [ "$${sleep_for}" -lt 60 ]; then
+            sleep_for=60
+          fi
+
+          echo "Backup completed at $$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Next backup in $${sleep_for} seconds."
+          sleep "$${sleep_for}"
+        }
+
+        if [ "$${RUN_BACKUP_ON_START}" != "true" ]; then
+          echo "Initial backup disabled; waiting $${BACKUP_INTERVAL_SECONDS} seconds."
+          sleep "$${BACKUP_INTERVAL_SECONDS}"
+        fi
+
+        while true; do
+          run_backup
+        done
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
+  # ------------------------------------------------------------
+  # ParaPilot web app (counter, back office, phone)
+  # Talks to ERPNext over the Docker network; the browser never calls ERPNext.
+  # ------------------------------------------------------------
+  parapilot-web:
+    image: ${PARAPILOT_WEB_IMAGE:-ghcr.io/adil-arhrimaz/parapilot-web:latest}
+    pull_policy: missing
+    container_name: parapilot-web
+    restart: unless-stopped
+    networks:
+      - erpnext-network
+      - edge-network
+    environment:
+      ERPNEXT_URL: http://erpnext-frontend:8080
+    depends_on:
+      - frontend
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge-network"
+      - "traefik.http.routers.parapilot.rule=Host(`${APP_HOST:-app.dermaroutine.ma}`)"
+      - "traefik.http.routers.parapilot.entrypoints=web"
+      - "traefik.http.routers.parapilot.service=parapilot"
+      - "traefik.http.routers.parapilot.middlewares=parapilot-forwarded-https@docker"
+      - "traefik.http.services.parapilot.loadbalancer.server.port=3000"
+      # Cloudflare Tunnel sends HTTP to Traefik: tell the app visitors use HTTPS (secure cookies).
+      - "traefik.http.middlewares.parapilot-forwarded-https.headers.customrequestheaders.X-Forwarded-Proto=https"
+
+volumes:
+  erpnext-db-data:
+    name: erpnext-db-data
+  erpnext-redis-queue-data:
+    name: erpnext-redis-queue-data
+  erpnext-sites:
+    name: erpnext-sites
+  erpnext-logs:
+    name: erpnext-logs
+
+networks:
+  erpnext-network:
+    name: erpnext-network
+    driver: bridge
+  edge-network:
+    external: true
+    name: edge-network
