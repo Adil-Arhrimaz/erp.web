@@ -517,6 +517,7 @@ def open_receipts(supplier: str) -> list[dict]:
 
 
 def _invoice_from_receipts(supplier: str, receipts: list[str]):
+	from erpnext.controllers.accounts_controller import get_taxes_and_charges
 	from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
 
 	invoice = None
@@ -524,6 +525,12 @@ def _invoice_from_receipts(supplier: str, receipts: list[str]):
 		if frappe.db.get_value("Purchase Receipt", name, "supplier") != supplier:
 			frappe.throw(_("Delivery note {0} is from another supplier.").format(name))
 		invoice = make_purchase_invoice(name, target_doc=invoice)
+	if invoice:
+		# Prices are TTC: the invoice always carries the VAT-included template, even for a delivery note
+		# entered in ERPNext without one. Its HT price then revalues the delivered stock.
+		template = get_settings().purchase_taxes_template
+		invoice.taxes_and_charges = template
+		invoice.set("taxes", get_taxes_and_charges("Purchase Taxes and Charges Template", template))
 	return invoice
 
 

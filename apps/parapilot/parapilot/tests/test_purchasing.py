@@ -175,3 +175,34 @@ class TestPurchasing(ParaPilotTestCase):
 		self.assertEqual([w["receipt_rate"] for w in invoice["warnings"]], [120])
 		purchasing.submit_invoice(invoice["name"])
 		self.assertEqual(purchasing.open_receipts(self.supplier), [])
+
+	def test_delivery_note_entered_without_vat_is_billed_with_vat(self):
+		"""Delivery notes typed in ERPNext before ParaPilot carry no VAT template, so the stock was valued
+		with VAT. Their supplier invoice still deducts the VAT and revalues the stock without it."""
+		from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import repost_entries
+
+		batch = frappe.get_doc(
+			{"doctype": "Batch", "batch_id": "_TEST-OLD-PR", "item": self.cream, "expiry_date": add_months(today(), 12)}
+		).insert()
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Purchase Receipt",
+				"company": self.company,
+				"supplier": self.supplier,
+				"set_warehouse": self.settings.shop_floor_warehouse,
+				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": batch.name, "use_serial_batch_fields": 1}],
+			}
+		)
+		receipt.insert()
+		receipt.submit()
+		self.assertFalse(receipt.taxes)
+		self.assertEqual(receipt.items[0].valuation_rate, 120)
+
+		lines = purchasing.preview_invoice(self.supplier, [receipt.name])["lines"]
+		invoice = purchasing.save_invoice(
+			{"supplier": self.supplier, "bill_no": "FA-OLD-1", "receipts": [receipt.name], "lines": lines, "pp_company_ice_on_invoice": 1}
+		)
+		self.assertEqual(invoice["totals"]["vat"], 40)
+		purchasing.submit_invoice(invoice["name"])
+		repost_entries()
+		self.assertEqual(frappe.db.get_value("Purchase Receipt Item", receipt.items[0].name, "valuation_rate"), 100)
