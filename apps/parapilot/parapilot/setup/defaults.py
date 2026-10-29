@@ -81,12 +81,16 @@ OVERHEAD_ITEMS = [
 ]
 
 
-def apply_defaults(company: str) -> dict:
-	"""Run every setup step for a company and store the result in ParaPilot Settings."""
+def apply_defaults(company: str, preset_groups: bool = True) -> dict:
+	"""Run every setup step for a company and store the result in ParaPilot Settings.
+
+	preset_groups=False keeps a shop's own product families and only adds "Frais généraux"."""
 	accounts = ensure_vat_accounts(company)
 	templates = ensure_item_tax_templates(company, accounts)
 	sales_taxes, purchase_taxes = ensure_taxes_and_charges_templates(company, accounts)
-	ensure_item_groups(templates)
+	ensure_item_groups(
+		templates, ITEM_GROUPS if preset_groups else [g for g in ITEM_GROUPS if g[0] == "Frais généraux"]
+	)
 	warehouses = ensure_warehouses(company)
 	selling, buying = ensure_price_lists(company)
 	ensure_walk_in_customer()
@@ -221,9 +225,9 @@ def ensure_taxes_and_charges_templates(company: str, accounts) -> tuple[str, str
 	return sales, purchase
 
 
-def ensure_item_groups(templates: dict[str, str]):
+def ensure_item_groups(templates: dict[str, str], groups: list[tuple[str, str]] = ITEM_GROUPS):
 	"""Create the preset groups; an existing group keeps the VAT category the accountant chose."""
-	for group_name, category in ITEM_GROUPS:
+	for group_name, category in groups:
 		if frappe.db.exists("Item Group", group_name):
 			doc = frappe.get_doc("Item Group", group_name)
 			if doc.taxes:
@@ -362,40 +366,43 @@ def ensure_till(
 	"""One POS Profile per counter. Existing tills keep their settings."""
 	if frappe.db.exists("POS Profile", name):
 		return name
-	from parapilot.setup.company import account_by_number
-
-	company_doc = frappe.get_cached_doc("Company", company)
 	profile = frappe.get_doc(
-		{
-			"doctype": "POS Profile",
-			"name": name,
-			"company": company,
-			"warehouse": warehouse,
-			"selling_price_list": price_list,
-			"currency": company_doc.default_currency,
-			"customer": WALK_IN_CUSTOMER,
-			"taxes_and_charges": sales_taxes,
-			"update_stock": 1,
-			"apply_discount_on": "Grand Total",
-			"disable_rounded_total": 1,
-			"allow_rate_change": 0,
-			"allow_discount_change": 1,
-			"ignore_pricing_rule": 1,
-			"account_for_change_amount": account_by_number(company, PAYMENT_MODES["cash"][2])
-			or company_doc.default_cash_account,
-			"write_off_account": account_by_number(company, CASH_DIFFERENCE_ACCOUNT)
-			or company_doc.write_off_account,
-			"write_off_cost_center": company_doc.cost_center,
-			"cost_center": company_doc.cost_center,
-			"write_off_limit": 1,
-			"payments": [
-				{"mode_of_payment": modes["cash"], "default": 1, "allow_in_returns": 1},
-				{"mode_of_payment": modes["card"], "allow_in_returns": 1},
-			],
-		}
+		{"doctype": "POS Profile", "name": name, **till_values(company, warehouse, price_list, sales_taxes, modes)}
 	)
 	profile.insert(ignore_permissions=True)
 	return profile.name
+
+
+def till_values(company: str, warehouse: str, price_list: str, sales_taxes: str, modes: dict[str, str]) -> dict:
+	"""POS Profile settings ParaPilot's till relies on."""
+	from parapilot.setup.company import account_by_number
+
+	company_doc = frappe.get_cached_doc("Company", company)
+	return {
+		"company": company,
+		"warehouse": warehouse,
+		"selling_price_list": price_list,
+		"currency": company_doc.default_currency,
+		"customer": WALK_IN_CUSTOMER,
+		"taxes_and_charges": sales_taxes,
+		"update_stock": 1,
+		"apply_discount_on": "Grand Total",
+		"disable_rounded_total": 1,
+		"allow_rate_change": 0,
+		"allow_discount_change": 1,
+		"ignore_pricing_rule": 1,
+		"account_for_change_amount": account_by_number(company, PAYMENT_MODES["cash"][2])
+		or company_doc.default_cash_account,
+		"write_off_account": account_by_number(company, CASH_DIFFERENCE_ACCOUNT)
+		or company_doc.write_off_account,
+		"write_off_cost_center": company_doc.cost_center,
+		"cost_center": company_doc.cost_center,
+		"write_off_limit": 1,
+		"payments": [
+			{"mode_of_payment": modes["cash"], "default": 1, "allow_in_returns": 1},
+			{"mode_of_payment": modes["card"], "allow_in_returns": 1},
+		],
+	}
 
 
 def ensure_petty_cash_account(company: str) -> str:

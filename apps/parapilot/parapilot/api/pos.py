@@ -175,6 +175,7 @@ def get_catalog(pos_profile: str) -> dict:
 		"company": _company_block(profile.company),
 		"receipt_language": settings.receipt_language or "fr",
 		"rounding_method": frappe.get_system_settings("rounding_method"),
+		"round_total": bool(settings.round_sales_total),
 		"tax_rows": [flt(t.rate) for t in taxes.taxes],
 		"payment_modes": _payment_modes(pos_profile),
 		"items": [
@@ -246,7 +247,9 @@ def submit_sale(sale: str | dict) -> dict:
 			"pos_profile": opening.pos_profile,
 			"customer": data.customer or profile.customer,
 			"update_stock": 1,
-			"disable_rounded_total": 1,
+			# With rounding on, the customer pays the total rounded to the dirham (ERPNext books the
+			# difference as a rounding adjustment); otherwise the exact total.
+			"disable_rounded_total": 0 if get_settings().round_sales_total else 1,
 			"pp_client_uuid": data.client_id,
 		}
 	)
@@ -353,6 +356,11 @@ def _company_block(company: str) -> dict:
 
 
 @frappe.whitelist()
+def amount_due(inv) -> float:
+	"""What the customer pays: the total rounded to the dirham when rounding is on."""
+	return flt(inv.rounded_total if not inv.disable_rounded_total and inv.rounded_total else inv.grand_total, 2)
+
+
 def get_receipt(name: str) -> dict:
 	"""Receipt data: legal IDs, lines, VAT by rate, totals and payments (CGI art. 145)."""
 	inv = frappe.get_doc("Sales Invoice", name)
@@ -399,6 +407,8 @@ def get_receipt(name: str) -> dict:
 			"ht": inv.net_total,
 			"vat": inv.total_taxes_and_charges,
 			"discount": flt(sum(flt(i.discount_amount) * flt(i.qty) for i in inv.items), 2),
+			"rounding": flt(inv.rounding_adjustment, 2),
+			"due": amount_due(inv),
 		},
 		"payments": [{"mode_of_payment": p.mode_of_payment, "amount": p.amount} for p in inv.payments if p.amount],
 		"paid": inv.paid_amount,

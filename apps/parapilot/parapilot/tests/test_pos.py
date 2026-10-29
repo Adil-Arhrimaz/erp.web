@@ -127,3 +127,41 @@ class TestPos(TillTestCase):
 		self.assertIn("Agadir", receipt["customer"]["address"])
 		with self.assertRaises(frappe.ValidationError):
 			pos.create_business_customer("_Test sans ICE", "12345")
+
+	def test_rounding_to_the_dirham(self):
+		"""With rounding on, the customer pays 443 for 442.62; change, closing and refunds follow it."""
+		from parapilot.api import returns
+
+		frappe.db.set_single_value("ParaPilot Settings", "round_sales_total", 1)
+		frappe.clear_document_cache("ParaPilot Settings", "ParaPilot Settings")
+		# Runs after tearDown's rollback, so the cached settings match the database again.
+		self.addCleanup(frappe.clear_document_cache, "ParaPilot Settings", "ParaPilot Settings")
+		self.assertTrue(pos.get_catalog(TEST_TILL)["round_total"])
+
+		receipt = self.sale(
+			"TESTPOS000010",
+			[{"item_code": self.item_by_barcode(SHAMPOO), "qty": 3, "price": 159.5, "rate": 147.54}],
+			[{"mode_of_payment": "Espèces", "amount": 500}],
+		)
+		self.assertEqual(receipt["totals"]["ttc"], 442.62)
+		self.assertEqual(receipt["totals"]["rounding"], 0.38)
+		self.assertEqual(receipt["totals"]["due"], 443)
+		self.assertEqual(receipt["change"], 57)
+		# VAT is on the exact total; the 0.38 goes to the rounding account.
+		self.assertEqual(receipt["totals"]["vat"], 73.77)
+		round_off = frappe.get_cached_value("Company", self.company, "round_off_account")
+		entries = frappe.get_all(
+			"GL Entry",
+			filters={"voucher_no": receipt["name"], "account": round_off, "is_cancelled": 0},
+			fields=["credit", "debit"],
+		)
+		self.assertEqual(sum(e.credit - e.debit for e in entries), 0.38)
+
+		found = returns.find_sale(receipt["name"])
+		refund = returns.submit_return(receipt["name"], [{"row": found["lines"][0]["row"], "qty": 1}], "Espèces")
+		self.assertEqual(refund["totals"]["ttc"], -147.54)
+		self.assertEqual(refund["totals"]["due"], -148)
+
+		z = pos.close_till({"Espèces": 500 + 443 - 148, "Carte bancaire": 0})
+		cash = next(p for p in z["payments"] if p["mode_of_payment"] == "Espèces")
+		self.assertEqual(cash["difference"], 0)

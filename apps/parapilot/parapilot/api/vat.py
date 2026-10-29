@@ -283,7 +283,8 @@ def _checks(company: str, start, end, invoices: list[dict], cash: list[dict]) ->
 		"""select distinct item.item_code, item.item_name from `tabSales Invoice Item` item
 		join `tabSales Invoice` inv on inv.name = item.parent
 		where inv.docstatus = 1 and inv.company = %s and inv.posting_date between %s and %s
-		and (item.item_tax_template is null or item.item_tax_template = '')""",
+		and (item.item_tax_template is null or item.item_tax_template = '')
+		and inv.total_taxes_and_charges = 0""",
 		(company, start, end),
 		as_dict=True,
 	)

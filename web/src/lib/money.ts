@@ -67,6 +67,10 @@ export interface DocumentTotals {
   vat: Cents;
   /** ERPNext books HT + VAT − TTC (±0.01) as a rounding adjustment. */
   roundingDiff: Cents;
+  /** Total rounded to the dirham minus TTC, when the shop rounds sales totals; otherwise 0. */
+  rounding: Cents;
+  /** What the customer pays: TTC, or TTC rounded to the dirham. */
+  due: Cents;
   /** One entry per VAT rate, as invoices must show (CGI art. 145): HT base, rate, VAT. */
   byRate: { vatRate: number; ht: Cents; vat: Cents }[];
   lines: { rate: Cents; amount: Cents; ht: Cents; vat: Cents }[];
@@ -77,6 +81,7 @@ export function documentTotals(
   lines: LineInput[],
   taxRows: number[] = DEFAULT_TAX_ROWS,
   method: RoundingMethod = "Commercial Rounding",
+  roundTotal = false,
 ): DocumentTotals {
   const rates = lines.map((l) => discountedRate(l.unitTtc, l.discountPercent ?? 0, method));
   const r = computeInvoiceTaxes(
@@ -94,8 +99,12 @@ export function documentTotals(
     const bucket = byRate.get(row.rate);
     if (bucket) bucket.vat += row.taxAmount;
   }
+  // frappe round_based_on_smallest_currency_fraction: MAD has no smallest fraction, so whole dirhams.
+  const due = roundTotal ? flt(flt(r.grandTotal, 0, method), 2, method) : r.grandTotal;
   return {
     ttc: toCents(r.grandTotal),
+    rounding: toCents(due) - toCents(r.grandTotal),
+    due: toCents(due),
     ht: toCents(r.netTotal),
     vat: toCents(r.totalTaxes),
     roundingDiff: toCents(r.roundingDiff),

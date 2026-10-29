@@ -52,7 +52,25 @@ describe("cart", () => {
     expect(sale.lines.map((l) => l.rate)).toEqual([189, 159.5, 85]);
     const receipt = localReceipt({ sale, cart, totals, cashier: "X", company: null });
     expect(receipt.change).toBe(47.5);
-    expect(receipt.totals).toEqual({ ttc: 752.5, ht: 627.08, vat: 125.42, discount: 0 });
+    expect(receipt.totals).toEqual({ ttc: 752.5, ht: 627.08, vat: 125.42, discount: 0, rounding: 0, due: 752.5 });
+  });
+
+  it("gives change from the total rounded to the dirham when the shop rounds", () => {
+    const cart = { ...addItem(emptyCart(), item("A", 159.5), 3), cartDiscount: 7.5 };
+    const totals = cartTotals(cart, [20, 10], "Commercial Rounding", true);
+    expect(totals).toMatchObject({ ttc: 44262, rounding: 38, due: 44300 });
+    const sale = buildSale({
+      cart,
+      totals,
+      tender: { cash: 500, card: 0 },
+      modes,
+      clientId: newClientId(),
+      posProfile: "Caisse 1",
+      soldAt: new Date(),
+    });
+    const receipt = localReceipt({ sale, cart, totals, cashier: "X", company: null });
+    expect(receipt.totals).toMatchObject({ ttc: 442.62, rounding: 0.38, due: 443 });
+    expect(receipt.change).toBe(57);
   });
 
   it("sends the discounted unit rate the till computed", () => {

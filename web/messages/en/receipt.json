@@ -12,6 +12,8 @@
   "totalHt": "Total excl. VAT",
   "totalVat": "Total VAT",
   "totalTtc": "Total incl. VAT",
+  "rounding": "Rounding",
+  "due": "Amount due",
   "vatRate": "VAT {rate}%",
   "exempt": "Exempt",
   "base": "Base excl. VAT",

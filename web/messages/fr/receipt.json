@@ -12,6 +12,8 @@
   "totalHt": "Total HT",
   "totalVat": "Total TVA",
   "totalTtc": "Total TTC",
+  "rounding": "Arrondi",
+  "due": "Net à payer",
   "vatRate": "TVA {rate} %",
   "exempt": "Exonéré",
   "base": "Base HT",

@@ -67,6 +67,22 @@ describe("documentTotals", () => {
     expect(totals.lines[0].rate).toBe(9158);
   });
 
+  it("charges the exact total when the shop does not round", () => {
+    const totals = documentTotals([{ unitTtc: 9900, qty: 3, vatRate: 20, discountPercent: 7.5 }]);
+    expect(totals.rounding).toBe(0);
+    expect(totals.due).toBe(27474);
+  });
+
+  it("rounds what the customer pays to the dirham, half away from zero", () => {
+    const at = (cents: number) =>
+      documentTotals([{ unitTtc: cents, qty: 1, vatRate: 20 }], undefined, "Commercial Rounding", true);
+    // 274.74 → 275.00; 274.49 → 274.00; 274.50 → 275.00 (Commercial Rounding, as ERPNext with MAD).
+    expect(at(27474)).toMatchObject({ ttc: 27474, rounding: 26, due: 27500 });
+    expect(at(27449)).toMatchObject({ ttc: 27449, rounding: -49, due: 27400 });
+    expect(at(27450)).toMatchObject({ ttc: 27450, rounding: 50, due: 27500 });
+    expect(at(18900)).toMatchObject({ rounding: 0, due: 18900 });
+  });
+
   it("puts exempt lines in their own VAT line with no VAT", () => {
     const totals = documentTotals([
       { unitTtc: 12000, qty: 1, vatRate: 20 },

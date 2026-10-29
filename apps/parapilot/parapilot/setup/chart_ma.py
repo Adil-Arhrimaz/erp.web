@@ -270,6 +270,7 @@ CHART = {
 		"Charges non courantes": _group(
 			"65",
 			{
+				"Valeurs nettes d'amortissements des immobilisations cédées": _leaf("6513", "Expense Account"),
 				"Pénalités et amendes fiscales": _leaf("6583", "Expense Account"),
 				"Ecarts d'arrondi": _leaf("6588", "Round Off"),
 			},

@@ -51,7 +51,12 @@ export function effectiveDiscount(line: CartLine, cartDiscount: number): number 
   return 100 * (1 - (1 - line.discount / 100) * (1 - cartDiscount / 100));
 }
 
-export function cartTotals(cart: Cart, taxRows: number[], method: RoundingMethod): DocumentTotals {
+export function cartTotals(
+  cart: Cart,
+  taxRows: number[],
+  method: RoundingMethod,
+  roundTotal = false,
+): DocumentTotals {
   return documentTotals(
     cart.lines.map((l) => ({
       unitTtc: toCents(l.price),
@@ -61,6 +66,7 @@ export function cartTotals(cart: Cart, taxRows: number[], method: RoundingMethod
     })),
     taxRows,
     method,
+    roundTotal,
   );
 }
 
@@ -140,9 +146,11 @@ export function localReceipt(args: {
       discount: fromCents(
         cart.lines.reduce((s, l, i) => s + (toCents(l.price) - totals.lines[i].rate) * l.qty, 0),
       ),
+      rounding: fromCents(totals.rounding),
+      due: fromCents(totals.due),
     },
     payments: sale.payments,
     paid: fromCents(paid),
-    change: fromCents(Math.max(0, paid - totals.ttc)),
+    change: fromCents(Math.max(0, paid - totals.due)),
   };
 }

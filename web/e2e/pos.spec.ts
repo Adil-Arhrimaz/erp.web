@@ -182,3 +182,33 @@ test("closing shows the cash difference and the Z report", async () => {
   await expect(page.locator(".print-area")).toContainText(/Retours \(1\)\s*-348,50/);
   await page.screenshot({ path: "test-results/shots/till-z.png", fullPage: true });
 });
+
+test("a shop that rounds to the dirham collects the rounded total", async ({ browser }) => {
+  const owner = await browser.newContext({ baseURL: "http://localhost:3000" });
+  expect((await owner.request.post("/api/auth/login", { data: { usr: "owner@dev.local", pwd: "parapilot-dev" } })).ok()).toBeTruthy();
+  const setRounding = (on: boolean) =>
+    owner.request.post("/api/call/settings.save_settings", { data: { values: { round_sales_total: on ? 1 : 0 } } });
+  expect((await setRounding(true)).ok()).toBeTruthy();
+  try {
+    await page.goto("/till");
+    await page.getByLabel("Fond de caisse").fill("500");
+    await page.getByRole("button", { name: "Ouvrir la caisse" }).click();
+    await expect(page).toHaveURL(/\/pos$/);
+    await scan("6111000000045"); // Shampooing 159,50
+    await expect(page.getByTestId("cart-rounding")).toHaveText(/0,50\s?DH/);
+    await expect(page.getByTestId("cart-total")).toHaveText(/160,00\s?DH/);
+    await page.screenshot({ path: "test-results/shots/pos-rounding.png" });
+    await page.keyboard.press("F9");
+    await page.getByRole("button", { name: "Montant exact" }).click();
+    await page.getByRole("button", { name: "Valider la vente" }).click();
+    const receipt = page.locator(".print-receipt");
+    await expect(receipt).toContainText(/Ticket ACC-SINV-/, { timeout: 15_000 });
+    await expect(receipt).toContainText(/Arrondi\s*0,50/);
+    await expect(receipt).toContainText(/Net à payer \(DH\)\s*160,00/);
+    await page.getByRole("button", { name: "Nouvelle vente" }).click();
+  } finally {
+    await setRounding(false);
+    await page.request.post("/api/pos/close", { data: { counted: {} } });
+    await owner.close();
+  }
+});

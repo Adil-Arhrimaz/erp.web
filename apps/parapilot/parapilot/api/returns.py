@@ -10,7 +10,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt
 
-from parapilot.api.pos import SELLERS, TillClosedError, _open_entry, get_receipt
+from parapilot.api.pos import SELLERS, TillClosedError, _open_entry, amount_due, get_receipt
 from parapilot.utils import can_see_costs, get_app_roles, get_settings, require_app_role
 
 PIN_ATTEMPTS = 5
@@ -175,7 +175,7 @@ def submit_return(invoice: str, lines: str | list, refund_mode: str, pin: str | 
 		approved_by = verify_manager_pin(pin)
 
 	ret.set("payments", [])
-	ret.append("payments", {"mode_of_payment": refund_mode, "amount": ret.grand_total})
+	ret.append("payments", {"mode_of_payment": refund_mode, "amount": amount_due(ret)})
 	ret.calculate_taxes_and_totals()
 	if approved_by:
 		ret.remarks = _("Return approved by {0}").format(frappe.utils.get_fullname(approved_by))

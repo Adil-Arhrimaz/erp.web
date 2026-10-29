@@ -35,6 +35,8 @@
     "discount": "Remise maximale des caissiers (%)",
     "pinThreshold": "PIN responsable au-delà de (DH)",
     "receiptLanguage": "Langue des tickets et factures",
+    "roundTotal": "Arrondir le total des ventes au dirham",
+    "roundTotalHint": "Le client paie le total arrondi au dirham le plus proche ; la différence est comptabilisée en écart d'arrondi.",
     "expiry": "Alerte péremption (jours)"
   },
   "families": {

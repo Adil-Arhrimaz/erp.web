@@ -24,6 +24,8 @@
   "vatLine": "TVA {rate} %",
   "vatExempt": "Exonéré",
   "totalTtc": "Total TTC",
+  "rounding": "Arrondi",
+  "due": "Net à payer",
   "pay": "Encaisser",
   "park": "Mettre en attente",
   "parked": "Ventes en attente",

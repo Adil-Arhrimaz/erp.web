@@ -27,6 +27,18 @@ class TestStock(ParaPilotTestCase):
 		overview = stock.stock_overview(search=CREAM)["items"][0]
 		self.assertEqual(overview["back_store"], 1)
 
+	def test_overview_lists_stocked_and_watched_products(self):
+		"""A large catalogue: products never stocked only show up through search."""
+		from parapilot.api.catalog import save_product
+
+		never = save_product({"item_name": "_Test jamais stocké", "item_group": "Visage", "price_ttc": 10})["item_code"]
+		listed = lambda: {r["item_code"] for r in stock.stock_overview()["items"]}  # noqa: E731
+		self.assertIn(self.cream, listed())
+		self.assertNotIn(never, listed())
+		self.assertEqual(stock.stock_overview(search="_Test jamais")["items"][0]["item_code"], never)
+		frappe.db.set_value("Item", never, "pp_min_stock", 2)
+		self.assertIn(never, listed())
+
 	def test_expired_write_off_goes_to_its_expense_account(self):
 		batch = frappe.get_doc(
 			{"doctype": "Batch", "batch_id": "_TEST-EXP", "item": self.cream, "expiry_date": add_days(today(), 10)}

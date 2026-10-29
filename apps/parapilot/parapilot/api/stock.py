@@ -47,6 +47,17 @@ def stock_overview(search: str | None = None, item_group: str | None = None, low
 			filters["name"] = by_barcode
 		else:
 			or_filters = [["item_name", "like", like], ["brand", "like", like], ["name", "like", like]]
+	elif not item_group:
+		# A full catalogue has thousands of products never stocked: without a search, show what is in
+		# stock or has a minimum to watch.
+		in_stock = frappe.get_all(
+			"Bin",
+			filters={"warehouse": ["in", [w for w in warehouses.values() if w]], "actual_qty": ["!=", 0]},
+			pluck="item_code",
+			distinct=True,
+		)
+		watched = frappe.get_all("Item", filters={"pp_min_stock": [">", 0]}, pluck="name")
+		filters["name"] = ["in", list(set(in_stock) | set(watched)) or [""]]
 	items = frappe.get_list(
 		"Item",
 		filters=filters,

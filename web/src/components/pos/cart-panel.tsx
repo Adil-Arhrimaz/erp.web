@@ -158,9 +158,19 @@ export function CartPanel(props: CartPanelProps) {
               <dd className="text-end">{moneyCents(r.vat)}</dd>
             </div>
           ))}
-          <dt className="pt-1 text-lg font-semibold">{t("totalTtc")}</dt>
+          {totals.rounding !== 0 && (
+            <>
+              <dt className="text-muted-foreground">{t("totalTtc")}</dt>
+              <dd className="text-end">{moneyCents(totals.ttc)}</dd>
+              <dt className="text-muted-foreground">{t("rounding")}</dt>
+              <dd className="text-end" data-testid="cart-rounding">
+                {moneyCents(totals.rounding)}
+              </dd>
+            </>
+          )}
+          <dt className="pt-1 text-lg font-semibold">{totals.rounding !== 0 ? t("due") : t("totalTtc")}</dt>
           <dd className="pt-1 text-end text-2xl font-bold" data-testid="cart-total">
-            {moneyCents(totals.ttc)}
+            {moneyCents(totals.due)}
           </dd>
         </dl>
         <div className="grid grid-cols-[auto_auto_1fr] gap-2">

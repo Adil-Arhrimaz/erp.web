@@ -78,6 +78,7 @@ def run():
 		)
 
 	receive_stock()
+	top_up_stock()
 
 	from parapilot.api.returns import store_pin
 
@@ -130,6 +131,49 @@ def receive_stock():
 			entry.append("items", row)
 	entry.insert()
 	entry.submit()
+
+
+def top_up_stock(minimum: int = 10, qty: int = 20):
+	"""Repeated browser test runs sell the placeholder products out: receive a fresh lot of any product
+	below the minimum on the shop floor."""
+	from frappe.utils import add_months, nowdate
+
+	settings = frappe.get_single("ParaPilot Settings")
+	entry = frappe.get_doc(
+		{"doctype": "Stock Entry", "stock_entry_type": "Material Receipt", "company": COMPANY, "items": []}
+	)
+	for name, _group, _brand, barcode, price in PRODUCTS:
+		item = frappe.db.get_value("Item Barcode", {"barcode": barcode}, "parent")
+		on_floor = frappe.db.get_value(
+			"Bin", {"item_code": item, "warehouse": settings.shop_floor_warehouse}, "actual_qty"
+		)
+		if (on_floor or 0) >= minimum:
+			continue
+		row = {
+			"item_code": item,
+			"qty": qty,
+			"t_warehouse": settings.shop_floor_warehouse,
+			"basic_rate": round(price / 1.2 / 1.6, 2),
+			"use_serial_batch_fields": 1,
+		}
+		if frappe.db.get_value("Item", item, "has_batch_no"):
+			row["batch_no"] = (
+				frappe.get_doc(
+					{
+						"doctype": "Batch",
+						"item": item,
+						"batch_id": f"{item}-T{nowdate().replace('-', '')}",
+						"expiry_date": add_months(nowdate(), 14),
+					}
+				)
+				.insert(ignore_if_duplicate=True)
+				.name
+			)
+		entry.append("items", row)
+	if entry.items:
+		entry.insert()
+		entry.submit()
+		print(f"Topped up {len(entry.items)} products")
 
 
 def show_errors(limit: int = 3):

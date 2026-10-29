@@ -291,6 +291,7 @@ export function PosSection({ data }: { data: SettingsData }) {
     return_pin_threshold: text(s.return_pin_threshold),
     expiry_warning_days: text(s.expiry_warning_days),
     receipt_language: text(s.receipt_language) || "fr",
+    round_sales_total: Boolean(s.round_sales_total),
   });
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -307,6 +308,18 @@ export function PosSection({ data }: { data: SettingsData }) {
           <ToggleGroupItem value="en" className="h-10 flex-1">English</ToggleGroupItem>
         </ToggleGroup>
       </Field>
+      <Field orientation="horizontal" className="sm:col-span-2">
+        <div className="grid gap-1">
+          <FieldLabel htmlFor="round_sales_total">{t("roundTotal")}</FieldLabel>
+          <p className="text-muted-foreground text-sm">{t("roundTotalHint")}</p>
+        </div>
+        <Switch
+          id="round_sales_total"
+          disabled={!data.is_owner}
+          checked={form.round_sales_total}
+          onCheckedChange={(v) => setForm((f) => ({ ...f, round_sales_total: v }))}
+        />
+      </Field>
       {data.is_owner && (
         <Button
           className="sm:col-span-2 sm:justify-self-end"
@@ -318,6 +331,7 @@ export function PosSection({ data }: { data: SettingsData }) {
                 return_pin_threshold: Number(form.return_pin_threshold.replace(",", ".")) || 0,
                 expiry_warning_days: Number(form.expiry_warning_days) || 90,
                 receipt_language: form.receipt_language,
+                round_sales_total: form.round_sales_total ? 1 : 0,
               },
             })
           }

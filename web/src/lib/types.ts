@@ -26,6 +26,7 @@ export interface SessionContext {
     return_pin_threshold: number;
     expiry_warning_days: number;
     receipt_language: Locale;
+    round_sales_total: 0 | 1;
     vat_period: "Monthly" | "Quarterly";
   };
 }

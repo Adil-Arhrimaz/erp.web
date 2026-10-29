@@ -22,6 +22,7 @@ SETTINGS_FIELDS = [
 	"cashier_discount_limit",
 	"return_pin_threshold",
 	"receipt_language",
+	"round_sales_total",
 ]
 VAT_FIELDS = {"vat_period", "vat_basis", "vat_deadline_day", "cash_deduction_daily_limit", "cash_deduction_monthly_limit", "stamp_duty_applies"}
 ROLE_KEYS = {"owner": "ParaPilot Owner", "manager": "ParaPilot Manager", "cashier": "ParaPilot Cashier", "stock_clerk": "ParaPilot Stock Clerk", "accountant": "ParaPilot Accountant"}

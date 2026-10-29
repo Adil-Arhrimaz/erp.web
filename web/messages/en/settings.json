@@ -35,6 +35,8 @@
     "discount": "Cashier maximum discount (%)",
     "pinThreshold": "Manager PIN above (DH)",
     "receiptLanguage": "Receipt and invoice language",
+    "roundTotal": "Round sales totals to the dirham",
+    "roundTotalHint": "The customer pays the total rounded to the nearest dirham; the difference is booked as a rounding adjustment.",
     "expiry": "Expiry alert (days)"
   },
   "families": {

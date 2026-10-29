@@ -129,7 +129,8 @@ function Till({ posProfile, status, user }: { posProfile: string; status: TillSt
 
   const taxRows = useMemo(() => catalog?.tax_rows ?? [20, 10], [catalog]);
   const method = catalog?.rounding_method ?? "Commercial Rounding";
-  const totals = useMemo(() => cartTotals(cart, taxRows, method), [cart, taxRows, method]);
+  const roundTotal = catalog?.round_total ?? false;
+  const totals = useMemo(() => cartTotals(cart, taxRows, method, roundTotal), [cart, taxRows, method, roundTotal]);
 
   const byBarcode = useMemo(() => {
     const map = new Map<string, CatalogItem>();
@@ -434,7 +435,7 @@ function Till({ posProfile, status, user }: { posProfile: string; status: TillSt
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t bg-background/95 p-3 backdrop-blur md:hidden">
         <Button size="lg" className="h-12 w-full justify-between text-base" onClick={() => setCartSheetOpen(true)}>
           <span>{t("cartCount", { count: itemCount })}</span>
-          <span className="num font-bold">{money(totals.ttc / 100)}</span>
+          <span className="num font-bold">{money(totals.due / 100)}</span>
         </Button>
       </div>
       <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
@@ -458,7 +459,7 @@ function Till({ posProfile, status, user }: { posProfile: string; status: TillSt
       <PaymentDialog
         open={payOpen}
         onOpenChange={setPayOpen}
-        due={totals.ttc}
+        due={totals.due}
         hasCard={catalog.payment_modes.some((m) => m.type === "Bank")}
         onConfirm={completeSale}
       />

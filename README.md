@@ -45,7 +45,8 @@ The ERPNext tests run on the dev site and roll back everything they create.
   (`parapilot.setup.install`). Cashier, Stock Clerk and AI have explicit document permissions.
 - **VAT**: one Item Tax Template per category on the item group (TVA 20 %, TVA 10 %, Exonéré, plus overhead
   variants posting to separate deductible accounts). Sales and purchase templates are "included in rate", so
-  every price is TTC. VAT is rounded per line; totals are not rounded to the dirham.
+  every price is TTC. VAT is rounded per line. Sales totals can be rounded to the dirham (ParaPilot Settings):
+  the customer pays the rounded total and ERPNext books the difference to 6588 (écarts d'arrondi).
 - **Point of sale**: each ticket is a paid Sales Invoice (ERPNext v16's POS flow) that moves stock at once;
   ERPNext picks batches first-expired-first-out. The till computes totals with `web/src/lib/erpnext-tax.ts`,
   an operation-by-operation copy of ERPNext's tax code, so offline receipts show what ERPNext books.
@@ -105,6 +106,21 @@ The ERPNext tests run on the dev site and roll back everything they create.
 | 9 | POS sells offline, then syncs without duplicates | e2e offline sale + offline reload, idempotency test | One full hour offline on the real till |
 | 10 | Every screen in FR/EN, light/dark, phone/tablet/desktop | products matrix (30 runs), POS and receiving on phone/tablet | Walk every screen on the shop's devices |
 | 11 | Accountant confirms VAT categories, accounts and settings | "Je confirme…" in Settings records who and when | Your accountant does it |
+
+## Taking over a shop already on ERPNext
+
+`parapilot.setup.adopt.adopt_company(company)` moves a company that already trades on ERPNext's standard
+chart to ParaPilot without losing its history: it adds the CGNC chart, merges each used standard account
+into its CGNC account (entries follow; the two sales VAT accounts both become 44551), removes the rest of the
+standard chart, renames the standard warehouse, price lists, walk-in customer, payment methods and till to
+ParaPilot's, gives every family TVA 20 % (the accountant changes the exceptions), disables older VAT templates
+and turns on lot and expiry tracking for stock products that never moved. Products with stock history keep
+no lots until the next stock count. `parapilot.setup.prod_cutover.run` does this for Derma Routine, turns on
+rounding to the dirham and sets each person's role.
+
+Rehearse on a copy first: restore the latest backup as a local site, run the cutover there, then sell, refund
+and close a till. Run it on production with the shop closed and every ERPNext till session closed (ERPNext
+refuses to merge accounts while entries are being posted), right after a backup.
 
 ## Production notes
 

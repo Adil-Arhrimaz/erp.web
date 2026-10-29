@@ -24,6 +24,7 @@ DEFAULT_ACCOUNTS = {
 	"accumulated_depreciation_account": "2835",
 	"depreciation_expense_account": "6193",
 	"capital_work_in_progress_account": "2392",
+	"disposal_account": "6513",
 }
 
 

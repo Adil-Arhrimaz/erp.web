@@ -42,6 +42,8 @@ export interface PosCatalog {
   company: CompanyBlock;
   receipt_language: "fr" | "en";
   rounding_method: RoundingMethod;
+  /** Sales totals are rounded to the dirham (ParaPilot Settings). */
+  round_total?: boolean;
   tax_rows: number[];
   payment_modes: PaymentMode[];
   items: CatalogItem[];
@@ -105,7 +107,8 @@ export interface Receipt {
     amount: number;
   }[];
   vat_by_rate: { rate: number; ht: number; vat: number }[];
-  totals: { ttc: number; ht: number; vat: number; discount: number };
+  /** rounding and due are missing on receipts saved before rounding to the dirham existed. */
+  totals: { ttc: number; ht: number; vat: number; discount: number; rounding?: number; due?: number };
   payments: { mode_of_payment: string; amount: number }[];
   paid: number;
   change: number;

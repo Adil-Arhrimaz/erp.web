@@ -114,6 +114,12 @@ export function Receipt({
         <Row label={t("totalHt")} value={amount(receipt.totals.ht)} />
         <Row label={t("totalVat")} value={amount(receipt.totals.vat)} />
         <Row label={`${t("totalTtc")} (${t("currency")})`} value={amount(receipt.totals.ttc)} strong />
+        {!!receipt.totals.rounding && (
+          <>
+            <Row label={t("rounding")} value={amount(receipt.totals.rounding)} />
+            <Row label={`${t("due")} (${t("currency")})`} value={amount(receipt.totals.due ?? receipt.totals.ttc)} strong />
+          </>
+        )}
       </div>
 
       <table className="mt-1 w-full border-t border-dashed border-black">

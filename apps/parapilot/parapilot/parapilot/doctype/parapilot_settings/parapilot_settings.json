@@ -36,7 +36,8 @@
   "cashier_discount_limit",
   "return_pin_threshold",
   "column_break_pos",
-  "receipt_language"
+  "receipt_language",
+  "round_sales_total"
  ],
  "fields": [
   {
@@ -230,6 +231,13 @@
    "fieldtype": "Select",
    "label": "Receipt and Invoice Language",
    "options": "fr\nen"
+  },
+  {
+   "default": "0",
+   "description": "Sales totals are rounded to the whole dirham; the difference is booked as a rounding adjustment.",
+   "fieldname": "round_sales_total",
+   "fieldtype": "Check",
+   "label": "Round Sales Total to the Dirham"
   }
  ],
  "issingle": 1,
