@@ -1,0 +1,47 @@
+{
+  "title": "Returns",
+  "tabs": {
+    "customer": "Customer return",
+    "supplier": "Supplier returns"
+  },
+  "scan": "Scan the receipt barcode or type the invoice number",
+  "notFound": "No sale found.",
+  "sale": "Sale {name} of {date}",
+  "returnable": "{qty} returnable",
+  "toQuarantine": "Damaged: to quarantine",
+  "refund": "Refund",
+  "refundTotal": "To refund",
+  "submit": "Confirm return",
+  "done": "Return recorded: the VAT is reversed.",
+  "pinTitle": "Manager PIN",
+  "pinHint": "Returns above {amount} must be approved by a manager.",
+  "pinConfirm": "Approve",
+  "newReturn": "New return",
+  "supplier": {
+    "drafts": "Returns to send",
+    "sent": "Returns sent",
+    "none": "No supplier return.",
+    "send": "Send",
+    "sentToast": "Supplier return recorded: stock updated.",
+    "from": "Delivery note {name}",
+    "chooseReceipt": "Original delivery note",
+    "create": "Return to supplier",
+    "damaged": "{qty} damaged"
+  },
+  "debitNote": {
+    "button": "Supplier credit note",
+    "title": "Supplier credit note",
+    "hint": "The credit note reduces the amount owed and the deductible VAT.",
+    "number": "Credit note number",
+    "qty": "Qty credited",
+    "submit": "Record credit note",
+    "done": "Credit note recorded."
+  },
+  "pin": {
+    "menu": "Approval PIN",
+    "title": "Your PIN",
+    "hint": "4 to 6 digits, typed to approve a cashier's returns.",
+    "save": "Save PIN",
+    "saved": "PIN saved."
+  }
+}

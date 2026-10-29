@@ -1,0 +1,14 @@
+{
+  "title": "Clients",
+  "search": "Nom, téléphone ou ICE",
+  "visits": "{count, plural, =0 {Aucun achat} one {# achat} other {# achats}}",
+  "lastVisit": "Dernier passage le {date}",
+  "consent": "Accepte les messages",
+  "consentHint": "Consentement nécessaire pour tout message marketing (loi 09-08).",
+  "consentOn": "Consentement donné le {date}",
+  "history": "Historique d'achats",
+  "return": "Retour",
+  "company": "Entreprise",
+  "individual": "Particulier",
+  "empty": "Aucun client enregistré."
+}

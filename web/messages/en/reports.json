@@ -1,0 +1,105 @@
+{
+  "title": "Reports",
+  "list": {
+    "daily_summary": [
+      "Daily summary",
+      "How did today go?"
+    ],
+    "monthly_sales": [
+      "Monthly sales",
+      "How is this month going versus last month?"
+    ],
+    "best_sellers": [
+      "Best sellers",
+      "What sells and what earns"
+    ],
+    "margins": [
+      "Margins",
+      "Where do I make money?"
+    ],
+    "slow_movers": [
+      "Slow movers",
+      "What is sleeping on the shelf"
+    ],
+    "expiry": [
+      "Expiry",
+      "What to sell or return soon"
+    ],
+    "stock_value": [
+      "Stock value",
+      "How much money is in stock?"
+    ],
+    "purchases_by_supplier": [
+      "Purchases by supplier",
+      "Who do I buy from?"
+    ]
+  },
+  "filters": {
+    "from": "From",
+    "to": "To",
+    "day": "Day",
+    "month": "Month",
+    "family": "Family",
+    "brand": "Brand",
+    "all": "All",
+    "today": "Today",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "days": "No sale for",
+    "sortBy": "Sort by",
+    "groupBy": "By"
+  },
+  "kpis": {
+    "ttc": "Sales incl. VAT",
+    "ht": "Sales excl. VAT",
+    "vat": "VAT",
+    "tickets": "Receipts",
+    "average_basket": "Average basket",
+    "returns": "Returns",
+    "previous_ttc": "Previous month",
+    "last_year_ttc": "Same month last year",
+    "margin": "Margin excl. VAT",
+    "margin_rate": "Margin rate",
+    "value": "Value at cost",
+    "items": "Products"
+  },
+  "columns": {
+    "mode_of_payment": "Payment method",
+    "amount": "Amount",
+    "item_group": "Family",
+    "brand": "Brand",
+    "item_name": "Product",
+    "qty": "Qty",
+    "ht": "Sales excl. VAT",
+    "ttc": "Incl. VAT",
+    "vat": "VAT",
+    "margin": "Margin excl. VAT",
+    "margin_rate": "Margin rate",
+    "cost": "Cost excl. VAT",
+    "value": "Value at cost",
+    "last_sale": "Last sale",
+    "supplier_name": "Supplier",
+    "invoices": "Invoices",
+    "lot": "Lot",
+    "expiry_date": "Expiry",
+    "location": "Location"
+  },
+  "sort": {
+    "qty": "Quantity",
+    "ht": "Sales excl. VAT",
+    "margin": "Margin"
+  },
+  "group": {
+    "item_name": "Product",
+    "brand": "Brand",
+    "item_group": "Family"
+  },
+  "byDay": "Sales incl. VAT by day",
+  "byBrand": "By brand",
+  "byLocation": "By location",
+  "never": "Never sold",
+  "empty": "No data for the period.",
+  "export": "Excel",
+  "print": "PDF"
+}

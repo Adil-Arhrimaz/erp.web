@@ -1,0 +1,24 @@
+{
+  "greeting": "Hello {name}",
+  "subtitle": "{company} · {role}",
+  "quickActions": "Quick access",
+  "shop": "Shop",
+  "legalIds": "Legal IDs",
+  "ice": "ICE",
+  "if": "IF",
+  "rc": "RC",
+  "tp": "Business tax (TP)",
+  "missing": "Missing",
+  "vatPeriod": "VAT declaration",
+  "periods": {
+    "Monthly": "Monthly",
+    "Quarterly": "Quarterly"
+  },
+  "setupNeeded": "Shop setup is not finished.",
+  "setupNeededBody": "The owner needs to run the setup wizard before the first sale.",
+  "alerts": "To watch",
+  "expired": "{count, plural, one {# expired lot in stock} other {# expired lots in stock}}",
+  "expiring": "{count, plural, one {# lot expires within 30 days} other {# lots expire within 30 days}}",
+  "lowStock": "{count, plural, one {# product below minimum stock} other {# products below minimum stock}}",
+  "allGood": "Nothing to report."
+}

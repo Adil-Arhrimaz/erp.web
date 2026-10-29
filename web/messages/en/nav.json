@@ -1,0 +1,27 @@
+{
+  "groups": {
+    "sell": "Sell",
+    "stock": "Stock",
+    "purchasing": "Purchasing",
+    "steer": "Overview"
+  },
+  "home": "Home",
+  "pos": "Point of sale",
+  "till": "Till opening and closing",
+  "returns": "Returns",
+  "customers": "Customers",
+  "products": "Products",
+  "receiving": "Receiving",
+  "stock": "Stock and expiry",
+  "stockCount": "Stock count",
+  "transfers": "Transfers and write-offs",
+  "suppliers": "Suppliers",
+  "purchaseOrders": "Purchase orders",
+  "supplierInvoices": "Supplier invoices",
+  "reports": "Reports",
+  "vat": "VAT",
+  "settings": "Settings",
+  "more": "More",
+  "openMenu": "Open menu",
+  "userMenu": "User menu"
+}

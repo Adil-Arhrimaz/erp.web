@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env*.local
+web/test-results/
+web/playwright-report/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+!.env.example
+*.sql
+*.sql.gz

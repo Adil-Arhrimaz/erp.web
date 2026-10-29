@@ -1,0 +1,27 @@
+{
+  "groups": {
+    "sell": "Vente",
+    "stock": "Stock",
+    "purchasing": "Achats",
+    "steer": "Pilotage"
+  },
+  "home": "Accueil",
+  "pos": "Caisse",
+  "till": "Ouverture et clôture",
+  "returns": "Retours",
+  "customers": "Clients",
+  "products": "Produits",
+  "receiving": "Réception",
+  "stock": "Stock et péremption",
+  "stockCount": "Inventaire",
+  "transfers": "Transferts et pertes",
+  "suppliers": "Fournisseurs",
+  "purchaseOrders": "Commandes",
+  "supplierInvoices": "Factures fournisseurs",
+  "reports": "Rapports",
+  "vat": "TVA",
+  "settings": "Réglages",
+  "more": "Plus",
+  "openMenu": "Ouvrir le menu",
+  "userMenu": "Menu utilisateur"
+}

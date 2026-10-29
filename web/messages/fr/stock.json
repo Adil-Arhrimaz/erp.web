@@ -1,0 +1,82 @@
+{
+  "locations": {
+    "shop_floor": "Surface de vente",
+    "back_store": "Réserve",
+    "quarantine": "Quarantaine"
+  },
+  "tabs": {
+    "stock": "Stock",
+    "expiry": "Péremption",
+    "low": "Stock bas"
+  },
+  "search": "Nom, marque ou code-barres",
+  "product": "Produit",
+  "total": "Total",
+  "value": "Valeur au coût",
+  "min": "Min.",
+  "low": "Stock bas",
+  "empty": "Aucun produit.",
+  "buckets": {
+    "expired": "Périmés",
+    "30": "Sous 30 jours",
+    "60": "Sous 60 jours",
+    "90": "Sous 90 jours"
+  },
+  "bucketSummary": "{batches, plural, one {# lot} other {# lots}} · {qty, plural, one {# unité} other {# unités}}",
+  "expiresIn": "{days, plural, =0 {Périme aujourd'hui} one {Périme dans # jour} other {Périme dans # jours}}",
+  "expiredSince": "{days, plural, one {Périmé depuis # jour} other {Périmé depuis # jours}}",
+  "lot": "Lot {lot}",
+  "noExpiry": "Aucun lot ne périme dans les 90 jours.",
+  "writeOff": "Sortir du stock",
+  "transfers": {
+    "title": "Transferts et pertes",
+    "modeTransfer": "Transfert",
+    "modeWriteOff": "Perte",
+    "from": "De",
+    "to": "Vers",
+    "swap": "Inverser",
+    "reason": "Motif",
+    "reasons": {
+      "breakage": "Casse",
+      "theft": "Vol",
+      "expired": "Périmé",
+      "tester": "Testeur ou échantillon"
+    },
+    "note": "Précision (facultatif)",
+    "batch": "Lot",
+    "batchAuto": "Le lot qui périme en premier part d'abord.",
+    "qty": "Qté",
+    "available": "{qty} disponibles",
+    "submitTransfer": "Valider le transfert",
+    "submitWriteOff": "Valider la sortie",
+    "transferred": "Transfert enregistré.",
+    "writtenOff": "Sortie de stock enregistrée.",
+    "scan": "Scannez les produits"
+  },
+  "counts": {
+    "title": "Inventaire",
+    "new": "Nouvel inventaire",
+    "location": "Lieu compté",
+    "family": "Famille (facultatif)",
+    "allFamilies": "Toutes les familles",
+    "start": "Commencer le comptage",
+    "blindHint": "Comptez ce qui est sur place : les quantités attendues s'affichent seulement après.",
+    "find": "Scanner ou rechercher dans la liste",
+    "progress": "{counted} / {total} lignes comptées",
+    "submit": "Terminer le comptage",
+    "noDifference": "Comptage conforme : aucun écart.",
+    "saved": "Comptage enregistré : en attente de validation.",
+    "toApprove": "À valider",
+    "approved": "Validé",
+    "approve": "Valider l'ajustement",
+    "approvedToast": "Ajustement de stock validé.",
+    "expected": "Attendu",
+    "counted": "Compté",
+    "difference": "Écart",
+    "differences": "{count, plural, one {# écart} other {# écarts}}",
+    "countedBy": "Compté par {name} le {date}",
+    "managerOnly": "Un responsable doit valider l'ajustement.",
+    "resume": "Reprendre le comptage en cours",
+    "noExpiry": "Sans lot"
+  }
+}

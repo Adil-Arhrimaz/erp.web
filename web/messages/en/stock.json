@@ -1,0 +1,82 @@
+{
+  "locations": {
+    "shop_floor": "Shop floor",
+    "back_store": "Back store",
+    "quarantine": "Quarantine"
+  },
+  "tabs": {
+    "stock": "Stock",
+    "expiry": "Expiry",
+    "low": "Low stock"
+  },
+  "search": "Name, brand or barcode",
+  "product": "Product",
+  "total": "Total",
+  "value": "Value at cost",
+  "min": "Min.",
+  "low": "Low stock",
+  "empty": "No product.",
+  "buckets": {
+    "expired": "Expired",
+    "30": "Within 30 days",
+    "60": "Within 60 days",
+    "90": "Within 90 days"
+  },
+  "bucketSummary": "{batches, plural, one {# lot} other {# lots}} · {qty, plural, one {# unit} other {# units}}",
+  "expiresIn": "{days, plural, =0 {Expires today} one {Expires in # day} other {Expires in # days}}",
+  "expiredSince": "{days, plural, one {Expired # day ago} other {Expired # days ago}}",
+  "lot": "Lot {lot}",
+  "noExpiry": "No lot expires within 90 days.",
+  "writeOff": "Write off",
+  "transfers": {
+    "title": "Transfers and write-offs",
+    "modeTransfer": "Transfer",
+    "modeWriteOff": "Write-off",
+    "from": "From",
+    "to": "To",
+    "swap": "Swap",
+    "reason": "Reason",
+    "reasons": {
+      "breakage": "Breakage",
+      "theft": "Theft",
+      "expired": "Expired",
+      "tester": "Tester or sample"
+    },
+    "note": "Details (optional)",
+    "batch": "Lot",
+    "batchAuto": "The lot that expires first leaves first.",
+    "qty": "Qty",
+    "available": "{qty} available",
+    "submitTransfer": "Confirm transfer",
+    "submitWriteOff": "Confirm write-off",
+    "transferred": "Transfer recorded.",
+    "writtenOff": "Write-off recorded.",
+    "scan": "Scan the products"
+  },
+  "counts": {
+    "title": "Stock count",
+    "new": "New count",
+    "location": "Location counted",
+    "family": "Family (optional)",
+    "allFamilies": "All families",
+    "start": "Start counting",
+    "blindHint": "Count what is there: the expected quantities only show afterwards.",
+    "find": "Scan or search the list",
+    "progress": "{counted} / {total} lines counted",
+    "submit": "Finish counting",
+    "noDifference": "Count matches: no difference.",
+    "saved": "Count saved: waiting for approval.",
+    "toApprove": "To approve",
+    "approved": "Approved",
+    "approve": "Approve adjustment",
+    "approvedToast": "Stock adjustment approved.",
+    "expected": "Expected",
+    "counted": "Counted",
+    "difference": "Difference",
+    "differences": "{count, plural, one {# difference} other {# differences}}",
+    "countedBy": "Counted by {name} on {date}",
+    "managerOnly": "A manager must approve the adjustment.",
+    "resume": "Resume the count in progress",
+    "noExpiry": "No lot"
+  }
+}

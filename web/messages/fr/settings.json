@@ -1,0 +1,76 @@
+{
+  "title": "Réglages",
+  "sections": {
+    "company": "Entreprise et identifiants légaux",
+    "vat": "TVA et déclaration",
+    "families": "Familles et catégories de TVA",
+    "pos": "Caisse",
+    "tills": "Caisses",
+    "users": "Utilisateurs",
+    "import": "Importer des produits"
+  },
+  "company": {
+    "name": "Raison sociale",
+    "abbr": "Abréviation",
+    "ice": "ICE",
+    "if": "IF",
+    "rc": "RC",
+    "tp": "Taxe professionnelle",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "city": "Ville"
+  },
+  "vat": {
+    "period": "Périodicité",
+    "basis": "Régime",
+    "deadline": "Jour limite de déclaration",
+    "dailyLimit": "Plafond espèces par jour et fournisseur",
+    "monthlyLimit": "Plafond espèces par mois et fournisseur",
+    "stampDuty": "Droit de timbre sur les règlements en espèces",
+    "confirm": "Je confirme les catégories, comptes et paramètres de TVA",
+    "confirmedBy": "Confirmé par {user} le {date}",
+    "notConfirmed": "Pas encore confirmé par le comptable."
+  },
+  "pos": {
+    "discount": "Remise maximale des caissiers (%)",
+    "pinThreshold": "PIN responsable au-delà de (DH)",
+    "receiptLanguage": "Langue des tickets et factures",
+    "expiry": "Alerte péremption (jours)"
+  },
+  "families": {
+    "items": "{count, plural, =0 {aucun produit} one {# produit} other {# produits}}",
+    "add": "Ajouter une famille",
+    "name": "Nom de la famille",
+    "borderline": "À confirmer par le comptable : laits infantiles, produits diététiques, matériel médical."
+  },
+  "tills": {
+    "add": "Ajouter une caisse",
+    "name": "Nom de la caisse",
+    "disabled": "Désactivée"
+  },
+  "users": {
+    "invite": "Ajouter un utilisateur",
+    "email": "E-mail",
+    "name": "Nom",
+    "role": "Rôle",
+    "password": "Mot de passe provisoire",
+    "disable": "Désactiver",
+    "enable": "Réactiver",
+    "disabled": "Désactivé",
+    "lastLogin": "Dernière connexion : {date}",
+    "never": "Jamais connecté"
+  },
+  "import": {
+    "template": "Télécharger le modèle",
+    "hint": "Remplissez le modèle (CSV, séparateur ; ou ,) puis déposez-le ici.",
+    "choose": "Choisir le fichier",
+    "check": "{valid, plural, one {# ligne valide} other {# lignes valides}}",
+    "errors": "Lignes à corriger",
+    "line": "Ligne {line}",
+    "import": "Importer {count, plural, one {# produit} other {# produits}}",
+    "done": "{count, plural, one {# produit importé.} other {# produits importés.}}",
+    "fixFirst": "Corrigez les erreurs puis déposez à nouveau le fichier."
+  },
+  "saved": "Enregistré.",
+  "save": "Enregistrer"
+}

@@ -1,0 +1,105 @@
+{
+  "title": "Rapports",
+  "list": {
+    "daily_summary": [
+      "Journée",
+      "Comment s'est passée la journée ?"
+    ],
+    "monthly_sales": [
+      "Ventes du mois",
+      "Comment va le mois par rapport au précédent ?"
+    ],
+    "best_sellers": [
+      "Meilleures ventes",
+      "Ce qui se vend et ce qui rapporte"
+    ],
+    "margins": [
+      "Marges",
+      "Où se fait l'argent ?"
+    ],
+    "slow_movers": [
+      "Produits dormants",
+      "Ce qui dort en rayon"
+    ],
+    "expiry": [
+      "Péremption",
+      "À vendre ou retourner bientôt"
+    ],
+    "stock_value": [
+      "Valeur du stock",
+      "Combien d'argent est en stock ?"
+    ],
+    "purchases_by_supplier": [
+      "Achats par fournisseur",
+      "À qui j'achète ?"
+    ]
+  },
+  "filters": {
+    "from": "Du",
+    "to": "Au",
+    "day": "Jour",
+    "month": "Mois",
+    "family": "Famille",
+    "brand": "Marque",
+    "all": "Toutes",
+    "today": "Aujourd'hui",
+    "thisMonth": "Ce mois",
+    "lastMonth": "Mois dernier",
+    "thisYear": "Cette année",
+    "days": "Sans vente depuis",
+    "sortBy": "Classer par",
+    "groupBy": "Par"
+  },
+  "kpis": {
+    "ttc": "Ventes TTC",
+    "ht": "Ventes HT",
+    "vat": "TVA",
+    "tickets": "Tickets",
+    "average_basket": "Panier moyen",
+    "returns": "Retours",
+    "previous_ttc": "Mois précédent",
+    "last_year_ttc": "Même mois l'an dernier",
+    "margin": "Marge HT",
+    "margin_rate": "Taux de marque",
+    "value": "Valeur au coût",
+    "items": "Produits"
+  },
+  "columns": {
+    "mode_of_payment": "Moyen de paiement",
+    "amount": "Montant",
+    "item_group": "Famille",
+    "brand": "Marque",
+    "item_name": "Produit",
+    "qty": "Qté",
+    "ht": "Ventes HT",
+    "ttc": "TTC",
+    "vat": "TVA",
+    "margin": "Marge HT",
+    "margin_rate": "Taux de marque",
+    "cost": "Coût HT",
+    "value": "Valeur au coût",
+    "last_sale": "Dernière vente",
+    "supplier_name": "Fournisseur",
+    "invoices": "Factures",
+    "lot": "Lot",
+    "expiry_date": "Péremption",
+    "location": "Lieu"
+  },
+  "sort": {
+    "qty": "Quantité",
+    "ht": "Ventes HT",
+    "margin": "Marge"
+  },
+  "group": {
+    "item_name": "Produit",
+    "brand": "Marque",
+    "item_group": "Famille"
+  },
+  "byDay": "Ventes TTC par jour",
+  "byBrand": "Par marque",
+  "byLocation": "Par lieu",
+  "never": "Jamais vendu",
+  "empty": "Aucune donnée sur la période.",
+  "export": "Excel",
+  "print": "PDF"
+}

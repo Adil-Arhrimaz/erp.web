@@ -1,0 +1,22 @@
+{
+  "title": "Shop setup",
+  "intro": "Eight steps, each saved as soon as it is done.",
+  "steps": {
+    "company": "Company",
+    "vat": "VAT",
+    "categories": "VAT categories",
+    "families": "Families",
+    "locations": "Locations",
+    "tills": "Tills",
+    "users": "Users",
+    "products": "Products"
+  },
+  "create": "Create the shop",
+  "creating": "Creating the chart of accounts and settings…",
+  "next": "Next step",
+  "done": "Done",
+  "skip": "Skip",
+  "finish": "The shop is ready.",
+  "locationsHint": "Three stock locations are created: Shop floor, Back store and Quarantine (damaged or expired, not for sale).",
+  "categoriesHint": "Prices are entered VAT-included. Each family carries a category: 20%, 10% or exempt. The accountant confirms these choices."
+}

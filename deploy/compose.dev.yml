@@ -1,0 +1,123 @@
+# Local ERPNext 16.52.1 + parapilot for development.
+#   docker compose -f deploy/compose.dev.yml up -d --build
+# Desk: http://localhost:8080 (Administrator / admin). The app source is mounted, so Python
+# changes only need `docker compose ... restart backend queue scheduler`.
+name: parapilot-dev
+
+x-erpnext: &erpnext
+  image: parapilot/erpnext:16.52.1-dev
+  pull_policy: never
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - ../apps/parapilot:/home/frappe/frappe-bench/apps/parapilot
+
+x-after-configurator: &after_configurator
+  depends_on:
+    configurator:
+      condition: service_completed_successfully
+
+services:
+  configurator:
+    <<: *erpnext
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host db;
+        bench set-config -gp db_port 3306;
+        bench set-config -g redis_cache redis://redis-cache:6379;
+        bench set-config -g redis_queue redis://redis-queue:6379;
+        bench set-config -g redis_socketio redis://redis-queue:6379;
+        bench set-config -gp socketio_port 9000;
+    depends_on:
+      db:
+        condition: service_healthy
+
+  create-site:
+    <<: [*erpnext, *after_configurator]
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        wait-for-it -t 120 db:3306;
+        wait-for-it -t 120 redis-cache:6379;
+        wait-for-it -t 120 redis-queue:6379;
+        if [ ! -d sites/erp.localhost ]; then
+          bench new-site erp.localhost --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --install-app parapilot --set-default;
+          bench --site erp.localhost set-config developer_mode 1;
+        fi
+
+  backend:
+    <<: [*erpnext, *after_configurator]
+    restart: unless-stopped
+
+  frontend:
+    <<: *erpnext
+    restart: unless-stopped
+    command: ["nginx-entrypoint.sh"]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: erp.localhost
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: 120
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+      - websocket
+
+  websocket:
+    <<: [*erpnext, *after_configurator]
+    restart: unless-stopped
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+
+  queue:
+    <<: [*erpnext, *after_configurator]
+    restart: unless-stopped
+    command: ["bench", "worker", "--queue", "long,default,short"]
+
+  scheduler:
+    <<: [*erpnext, *after_configurator]
+    restart: unless-stopped
+    command: ["bench", "schedule"]
+
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+      # MariaDB 11.6+ defaults this ON; Frappe's deadlock handling expects the classic behaviour,
+      # otherwise concurrent logins/sales fail with error 1020 "Record has changed since last read".
+      - --innodb-snapshot-isolation=OFF
+    environment:
+      MARIADB_ROOT_PASSWORD: admin
+    volumes:
+      - db:/var/lib/mysql
+
+  redis-cache:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+
+  redis-queue:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-queue:/data
+
+volumes:
+  db:
+  sites:
+  redis-queue:

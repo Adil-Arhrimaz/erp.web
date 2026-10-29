@@ -1,0 +1,76 @@
+{
+  "title": "Settings",
+  "sections": {
+    "company": "Company and legal IDs",
+    "vat": "VAT and declaration",
+    "families": "Families and VAT categories",
+    "pos": "Point of sale",
+    "tills": "Tills",
+    "users": "Users",
+    "import": "Import products"
+  },
+  "company": {
+    "name": "Company name",
+    "abbr": "Abbreviation",
+    "ice": "ICE",
+    "if": "IF",
+    "rc": "RC",
+    "tp": "Business tax (TP)",
+    "phone": "Phone",
+    "address": "Address",
+    "city": "City"
+  },
+  "vat": {
+    "period": "Frequency",
+    "basis": "Basis",
+    "deadline": "Declaration deadline day",
+    "dailyLimit": "Cash limit per day and supplier",
+    "monthlyLimit": "Cash limit per month and supplier",
+    "stampDuty": "Stamp duty on cash settlements",
+    "confirm": "I confirm the VAT categories, accounts and settings",
+    "confirmedBy": "Confirmed by {user} on {date}",
+    "notConfirmed": "Not confirmed by the accountant yet."
+  },
+  "pos": {
+    "discount": "Cashier maximum discount (%)",
+    "pinThreshold": "Manager PIN above (DH)",
+    "receiptLanguage": "Receipt and invoice language",
+    "expiry": "Expiry alert (days)"
+  },
+  "families": {
+    "items": "{count, plural, =0 {no product} one {# product} other {# products}}",
+    "add": "Add a family",
+    "name": "Family name",
+    "borderline": "For the accountant to confirm: infant milk, dietetic foods, medical devices."
+  },
+  "tills": {
+    "add": "Add a till",
+    "name": "Till name",
+    "disabled": "Disabled"
+  },
+  "users": {
+    "invite": "Add a user",
+    "email": "Email",
+    "name": "Name",
+    "role": "Role",
+    "password": "Temporary password",
+    "disable": "Disable",
+    "enable": "Enable",
+    "disabled": "Disabled",
+    "lastLogin": "Last login: {date}",
+    "never": "Never logged in"
+  },
+  "import": {
+    "template": "Download the template",
+    "hint": "Fill in the template (CSV, ; or , separated) and drop it here.",
+    "choose": "Choose the file",
+    "check": "{valid, plural, one {# valid line} other {# valid lines}}",
+    "errors": "Lines to fix",
+    "line": "Line {line}",
+    "import": "Import {count, plural, one {# product} other {# products}}",
+    "done": "{count, plural, one {# product imported.} other {# products imported.}}",
+    "fixFirst": "Fix the errors, then drop the file again."
+  },
+  "saved": "Saved.",
+  "save": "Save"
+}

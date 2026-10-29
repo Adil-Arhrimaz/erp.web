@@ -1,0 +1,24 @@
+{
+  "greeting": "Bonjour {name}",
+  "subtitle": "{company} · {role}",
+  "quickActions": "Accès rapide",
+  "shop": "Boutique",
+  "legalIds": "Identifiants légaux",
+  "ice": "ICE",
+  "if": "IF",
+  "rc": "RC",
+  "tp": "Taxe professionnelle",
+  "missing": "À renseigner",
+  "vatPeriod": "Déclaration de TVA",
+  "periods": {
+    "Monthly": "Mensuelle",
+    "Quarterly": "Trimestrielle"
+  },
+  "setupNeeded": "La configuration de la boutique n'est pas terminée.",
+  "setupNeededBody": "Le propriétaire doit lancer l'assistant de configuration avant la première vente.",
+  "alerts": "À surveiller",
+  "expired": "{count, plural, one {# lot périmé en stock} other {# lots périmés en stock}}",
+  "expiring": "{count, plural, one {# lot périme sous 30 jours} other {# lots périment sous 30 jours}}",
+  "lowStock": "{count, plural, one {# produit sous le stock minimum} other {# produits sous le stock minimum}}",
+  "allGood": "Rien à signaler."
+}

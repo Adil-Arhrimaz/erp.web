@@ -1,0 +1,47 @@
+{
+  "title": "Retours",
+  "tabs": {
+    "customer": "Retour client",
+    "supplier": "Retours fournisseurs"
+  },
+  "scan": "Scannez le code-barres du ticket ou saisissez le n° de facture",
+  "notFound": "Aucune vente trouvée.",
+  "sale": "Vente {name} du {date}",
+  "returnable": "{qty} retournables",
+  "toQuarantine": "Abîmé : en quarantaine",
+  "refund": "Remboursement",
+  "refundTotal": "À rembourser",
+  "submit": "Valider le retour",
+  "done": "Retour enregistré : la TVA est annulée.",
+  "pinTitle": "Code PIN du responsable",
+  "pinHint": "Les retours de plus de {amount} doivent être validés par un responsable.",
+  "pinConfirm": "Valider",
+  "newReturn": "Nouveau retour",
+  "supplier": {
+    "drafts": "Retours à envoyer",
+    "sent": "Retours envoyés",
+    "none": "Aucun retour fournisseur.",
+    "send": "Envoyer",
+    "sentToast": "Retour fournisseur enregistré : le stock a été mis à jour.",
+    "from": "Bon de livraison {name}",
+    "chooseReceipt": "Bon de livraison d'origine",
+    "create": "Retourner au fournisseur",
+    "damaged": "{qty} abîmés"
+  },
+  "debitNote": {
+    "button": "Avoir fournisseur",
+    "title": "Avoir fournisseur",
+    "hint": "L'avoir réduit le montant dû et la TVA déductible.",
+    "number": "N° de l'avoir",
+    "qty": "Qté créditée",
+    "submit": "Enregistrer l'avoir",
+    "done": "Avoir enregistré."
+  },
+  "pin": {
+    "menu": "Code PIN de validation",
+    "title": "Votre code PIN",
+    "hint": "4 à 6 chiffres, tapés pour valider les retours d'un caissier.",
+    "save": "Enregistrer le PIN",
+    "saved": "Code PIN enregistré."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Configuration de la boutique",
+  "intro": "Huit étapes, chacune enregistrée dès qu'elle est faite.",
+  "steps": {
+    "company": "Entreprise",
+    "vat": "TVA",
+    "categories": "Catégories TVA",
+    "families": "Familles",
+    "locations": "Emplacements",
+    "tills": "Caisses",
+    "users": "Utilisateurs",
+    "products": "Produits"
+  },
+  "create": "Créer la boutique",
+  "creating": "Création du plan comptable et des réglages…",
+  "next": "Étape suivante",
+  "done": "Terminé",
+  "skip": "Passer",
+  "finish": "La boutique est prête.",
+  "locationsHint": "Trois emplacements de stock sont créés : Surface de vente, Réserve et Quarantaine (produits abîmés ou périmés, non vendables).",
+  "categoriesHint": "Les prix sont saisis TTC. Chaque famille porte une catégorie : 20 %, 10 % ou exonéré. Le comptable confirme ces choix."
+}

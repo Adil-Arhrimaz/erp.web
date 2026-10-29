@@ -1,0 +1,274 @@
+{
+ "actions": [],
+ "creation": "2026-10-28 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "setup_steps_done",
+  "vat_section",
+  "vat_period",
+  "vat_basis",
+  "vat_deadline_day",
+  "column_break_vat",
+  "vat_template_standard",
+  "vat_template_reduced",
+  "vat_template_exempt",
+  "sales_taxes_template",
+  "purchase_taxes_template",
+  "vat_confirmed_by",
+  "vat_confirmed_on",
+  "cash_section",
+  "cash_deduction_daily_limit",
+  "cash_deduction_monthly_limit",
+  "column_break_cash",
+  "stamp_duty_applies",
+  "stock_section",
+  "shop_floor_warehouse",
+  "back_store_warehouse",
+  "quarantine_warehouse",
+  "column_break_stock",
+  "selling_price_list",
+  "buying_price_list",
+  "expiry_warning_days",
+  "pos_section",
+  "cashier_discount_limit",
+  "return_pin_threshold",
+  "column_break_pos",
+  "receipt_language"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "description": "Setup wizard steps already completed, as a JSON list.",
+   "fieldname": "setup_steps_done",
+   "fieldtype": "Small Text",
+   "label": "Setup Steps Done",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vat_section",
+   "fieldtype": "Section Break",
+   "label": "VAT"
+  },
+  {
+   "default": "Quarterly",
+   "description": "Monthly when last year's taxable turnover reached 1,000,000 DH; quarterly below that and for the first 12 months.",
+   "fieldname": "vat_period",
+   "fieldtype": "Select",
+   "label": "Declaration Period",
+   "options": "Monthly\nQuarterly"
+  },
+  {
+   "default": "Cash",
+   "description": "Cash basis (encaissement) is the default regime; invoice basis (débits) is optional.",
+   "fieldname": "vat_basis",
+   "fieldtype": "Select",
+   "label": "VAT Basis",
+   "options": "Cash\nInvoice"
+  },
+  {
+   "default": "20",
+   "description": "Day of the following month the declaration is due on SIMPL. To be confirmed by the accountant.",
+   "fieldname": "vat_deadline_day",
+   "fieldtype": "Int",
+   "label": "Declaration Deadline Day"
+  },
+  {
+   "fieldname": "column_break_vat",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vat_template_standard",
+   "fieldtype": "Link",
+   "label": "Standard VAT (20%)",
+   "options": "Item Tax Template"
+  },
+  {
+   "fieldname": "vat_template_reduced",
+   "fieldtype": "Link",
+   "label": "Reduced VAT (10%)",
+   "options": "Item Tax Template"
+  },
+  {
+   "fieldname": "vat_template_exempt",
+   "fieldtype": "Link",
+   "label": "Exempt",
+   "options": "Item Tax Template"
+  },
+  {
+   "fieldname": "sales_taxes_template",
+   "fieldtype": "Link",
+   "label": "Sales Taxes Template (TTC)",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "purchase_taxes_template",
+   "fieldtype": "Link",
+   "label": "Purchase Taxes Template (TTC)",
+   "options": "Purchase Taxes and Charges Template"
+  },
+  {
+   "fieldname": "vat_confirmed_by",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "VAT Settings Confirmed By",
+   "read_only": 1,
+   "description": "The accountant who confirmed the VAT categories, accounts and declaration settings."
+  },
+  {
+   "fieldname": "vat_confirmed_on",
+   "fieldtype": "Datetime",
+   "label": "VAT Settings Confirmed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cash_section",
+   "fieldtype": "Section Break",
+   "label": "Cash Payments to Suppliers"
+  },
+  {
+   "default": "5000",
+   "description": "Purchase VAT paid in cash is deductible up to this amount TTC per day and supplier.",
+   "fieldname": "cash_deduction_daily_limit",
+   "fieldtype": "Currency",
+   "label": "Daily Cash Limit per Supplier"
+  },
+  {
+   "default": "50000",
+   "fieldname": "cash_deduction_monthly_limit",
+   "fieldtype": "Currency",
+   "label": "Monthly Cash Limit per Supplier"
+  },
+  {
+   "fieldname": "column_break_cash",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "0.25% stamp duty on cash settlements, to be confirmed by the accountant.",
+   "fieldname": "stamp_duty_applies",
+   "fieldtype": "Check",
+   "label": "Stamp Duty on Cash Applies"
+  },
+  {
+   "fieldname": "stock_section",
+   "fieldtype": "Section Break",
+   "label": "Stock"
+  },
+  {
+   "fieldname": "shop_floor_warehouse",
+   "fieldtype": "Link",
+   "label": "Shop Floor",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "back_store_warehouse",
+   "fieldtype": "Link",
+   "label": "Back Store",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "quarantine_warehouse",
+   "fieldtype": "Link",
+   "label": "Quarantine",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "column_break_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "selling_price_list",
+   "fieldtype": "Link",
+   "label": "Selling Price List (TTC)",
+   "options": "Price List"
+  },
+  {
+   "fieldname": "buying_price_list",
+   "fieldtype": "Link",
+   "label": "Buying Price List (TTC)",
+   "options": "Price List"
+  },
+  {
+   "default": "90",
+   "fieldname": "expiry_warning_days",
+   "fieldtype": "Int",
+   "label": "Expiry Warning (Days)"
+  },
+  {
+   "fieldname": "pos_section",
+   "fieldtype": "Section Break",
+   "label": "Point of Sale"
+  },
+  {
+   "default": "10",
+   "fieldname": "cashier_discount_limit",
+   "fieldtype": "Percent",
+   "label": "Cashier Discount Limit"
+  },
+  {
+   "default": "200",
+   "description": "Customer returns above this amount TTC need a manager PIN.",
+   "fieldname": "return_pin_threshold",
+   "fieldtype": "Currency",
+   "label": "Return PIN Threshold"
+  },
+  {
+   "fieldname": "column_break_pos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "fr",
+   "fieldname": "receipt_language",
+   "fieldtype": "Select",
+   "label": "Receipt and Invoice Language",
+   "options": "fr\nen"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ParaPilot",
+ "name": "ParaPilot Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "ParaPilot Owner",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "ParaPilot Accountant",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "ParaPilot Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
