@@ -1,4 +1,5 @@
-# Checks the web app, then builds the two images the server runs and pushes them to GitHub's registry:
+# Checks the web app on every push. The images are built only on request (Actions → images → Run workflow),
+# when a version is ready for the server. They are pushed to GitHub's registry:
 #   ghcr.io/adil-arhrimaz/parapilot-erpnext  ERPNext 16.52.1 with the parapilot app
 #   ghcr.io/adil-arhrimaz/parapilot-web      the Next.js app
 # Each image is tagged with the commit (sha-xxxxxxx) and "latest"; the server pins a sha tag.
@@ -35,6 +36,7 @@ jobs:
 
   build:
     needs: check
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     strategy:
       matrix:
