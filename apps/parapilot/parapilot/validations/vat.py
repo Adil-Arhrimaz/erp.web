@@ -61,3 +61,18 @@ def validate_items_have_vat_category(doc, method=None):
 			_("These items have no VAT category: {0}").format(", ".join(sorted(set(missing)))),
 			title=_("VAT category missing"),
 		)
+
+
+def add_purchase_vat(doc, method=None):
+	"""Purchase prices are entered VAT included at the shop. A delivery note or supplier invoice typed in
+	ERPNext without a taxes template gets ParaPilot's VAT-included purchase template, so the stock is valued
+	without VAT and the VAT can be deducted. Returns keep the taxes of what they return."""
+	if _skip() or doc.get("is_return") or doc.get("taxes") or doc.flags.ignore_parapilot_vat:
+		return
+	from erpnext.controllers.accounts_controller import get_taxes_and_charges
+
+	settings = frappe.get_cached_doc("ParaPilot Settings")
+	if not settings.purchase_taxes_template or doc.company != settings.company:
+		return
+	doc.taxes_and_charges = settings.purchase_taxes_template
+	doc.set("taxes", get_taxes_and_charges("Purchase Taxes and Charges Template", settings.purchase_taxes_template))

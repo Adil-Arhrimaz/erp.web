@@ -140,7 +140,8 @@ export interface ReceiptRow {
   docstatus: 1 | 2;
   pp_damage_return: string | null;
   pp_corrects: string | null;
-  taxes_and_charges: string | null;
+  /** False for delivery notes typed in ERPNext without VAT. */
+  vat_included: boolean;
   grand_total?: number;
 }
 

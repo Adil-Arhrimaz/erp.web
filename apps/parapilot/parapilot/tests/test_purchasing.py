@@ -15,6 +15,22 @@ class TestPurchasing(ParaPilotTestCase):
 			{"supplier_name": "_Test Labo Dermo", "pp_ice": "002345678000012", "pp_lead_time_days": 5}
 		)["name"]
 
+	def old_receipt(self, batch: str):
+		"""A delivery note as typed in ERPNext before ParaPilot: no VAT template, stock valued VAT included."""
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Purchase Receipt",
+				"company": self.company,
+				"supplier": self.supplier,
+				"set_warehouse": self.settings.shop_floor_warehouse,
+				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": batch, "use_serial_batch_fields": 1}],
+			}
+		)
+		receipt.flags.ignore_parapilot_vat = True
+		receipt.insert()
+		receipt.submit()
+		return receipt
+
 	def stock(self, warehouse):
 		return flt(frappe.db.get_value("Bin", {"item_code": self.cream, "warehouse": warehouse}, "actual_qty"))
 
@@ -184,17 +200,7 @@ class TestPurchasing(ParaPilotTestCase):
 		batch = frappe.get_doc(
 			{"doctype": "Batch", "batch_id": "_TEST-OLD-PR", "item": self.cream, "expiry_date": add_months(today(), 12)}
 		).insert()
-		receipt = frappe.get_doc(
-			{
-				"doctype": "Purchase Receipt",
-				"company": self.company,
-				"supplier": self.supplier,
-				"set_warehouse": self.settings.shop_floor_warehouse,
-				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": batch.name, "use_serial_batch_fields": 1}],
-			}
-		)
-		receipt.insert()
-		receipt.submit()
+		receipt = self.old_receipt(batch.name)
 		self.assertFalse(receipt.taxes)
 		self.assertEqual(receipt.items[0].valuation_rate, 120)
 
@@ -304,16 +310,7 @@ class TestPurchasing(ParaPilotTestCase):
 		from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import repost_entries
 
 		frappe.get_doc({"doctype": "Batch", "batch_id": "_TEST-OLD-C", "item": self.cream, "expiry_date": add_months(today(), 12)}).insert()
-		old = frappe.get_doc(
-			{
-				"doctype": "Purchase Receipt",
-				"company": self.company,
-				"supplier": self.supplier,
-				"set_warehouse": self.settings.shop_floor_warehouse,
-				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": "_TEST-OLD-C", "use_serial_batch_fields": 1}],
-			}
-		).insert()
-		old.submit()
+		old = self.old_receipt("_TEST-OLD-C")
 		self.issue(1, "_TEST-OLD-C")
 		self.assertFalse(purchasing.get_receipt(old.name)["vat_included"])
 
@@ -324,3 +321,40 @@ class TestPurchasing(ParaPilotTestCase):
 		self.assertTrue(new["vat_included"])
 		self.assertEqual(new["totals"]["vat"], 40)
 		self.assertEqual(frappe.db.get_value("Purchase Receipt Item", {"parent": corrected}, "valuation_rate"), 100)
+
+	def test_delivery_note_typed_in_erpnext_gets_the_vat(self):
+		"""Someone enters a delivery note in the ERPNext desk and forgets the VAT: ParaPilot adds it."""
+		frappe.get_doc({"doctype": "Batch", "batch_id": "_TEST-DESK", "item": self.cream, "expiry_date": add_months(today(), 12)}).insert()
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Purchase Receipt",
+				"company": self.company,
+				"supplier": self.supplier,
+				"set_warehouse": self.settings.shop_floor_warehouse,
+				"items": [{"item_code": self.cream, "qty": 2, "rate": 120, "batch_no": "_TEST-DESK", "use_serial_batch_fields": 1}],
+			}
+		).insert()
+		self.assertEqual(receipt.taxes_and_charges, self.settings.purchase_taxes_template)
+		self.assertEqual((receipt.grand_total, receipt.total_taxes_and_charges), (240, 40))
+		receipt.submit()
+		self.assertEqual(receipt.items[0].valuation_rate, 100)
+
+	def test_all_old_delivery_notes_get_the_vat_at_takeover(self):
+		"""At the move to ParaPilot, every delivery note without VAT and not invoiced is corrected; an
+		invoiced one is listed instead."""
+		from parapilot.setup.adopt import fix_receipts_without_vat
+
+		for batch in ("_TEST-OLD-1", "_TEST-OLD-2"):
+			frappe.get_doc({"doctype": "Batch", "batch_id": batch, "item": self.cream, "expiry_date": add_months(today(), 12)}).insert()
+		sold = self.old_receipt("_TEST-OLD-1")
+		self.issue(1, "_TEST-OLD-1")
+		invoiced = self.old_receipt("_TEST-OLD-2")
+		lines = purchasing.preview_invoice(self.supplier, [invoiced.name])["lines"]
+		purchasing.save_invoice({"supplier": self.supplier, "bill_no": "FA-OLD-2", "receipts": [invoiced.name], "lines": lines})
+
+		fixed, not_fixed = fix_receipts_without_vat(self.company)
+		self.assertGreaterEqual(fixed, 1)
+		corrected = purchasing.get_receipt(sold.name)["corrected_by"]
+		self.assertTrue(purchasing.get_receipt(corrected)["vat_included"])
+		self.assertEqual(frappe.db.get_value("Purchase Receipt Item", {"parent": corrected}, "valuation_rate"), 100)
+		self.assertTrue(any(line.startswith(invoiced.name) for line in not_fixed))

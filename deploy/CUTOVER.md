@@ -50,9 +50,11 @@ Commands run on the server. The site name is `erp.dermaroutine.ma` (`SITE_NAME` 
    docker exec erpnext-backend bench --site erp.dermaroutine.ma migrate
    docker exec erpnext-backend bench --site erp.dermaroutine.ma execute parapilot.setup.prod_cutover.run
    ```
-   The last command prints `merged: 19`, `accounts_kept: 0`, `groups_given_vat: 529` and
-   `items_with_batches: 11800` (numbers may differ slightly if products were added since the rehearsal).
-   `accounts_kept` above 0 or any error: stop and send the output.
+   The last command takes a few minutes. It prints `merged: 19`, `accounts_kept: 0`, `groups_given_vat: 529`,
+   `items_with_batches: 11800`, `receipts_given_vat: 76` and `receipts_not_fixed: 0` (numbers may differ
+   slightly if products or deliveries were added since the rehearsal). `receipts_given_vat` is the delivery
+   notes typed in ERPNext without VAT, now valued without it, with the cost of what was sold since recomputed.
+   `accounts_kept` or `receipts_not_fixed` above 0, or any error: stop and send the output.
 5. **Refresh:**
    ```bash
    docker exec erpnext-backend bench --site erp.dermaroutine.ma clear-cache
@@ -84,9 +86,9 @@ Before the shop opens, go back to the backup of step 2:
 ## In the following days
 
 - **Accountant**: confirm the VAT categories in *Settings* (every family is at 20 % for now) and the account
-  mapping; clear the opening balance left in 3990 *Ouverture temporaire* (−31,514.81 DH); enter the 88 delivery
-  notes not yet invoiced as supplier invoices (*Supplier invoices → New*), so the supplier debt and deductible
-  VAT are in the books.
+  mapping; clear the opening balance left in 3990 *Ouverture temporaire* (−31,514.81 DH); enter the suppliers'
+  invoices for the delivery notes not yet invoiced (*Supplier invoices → New*; *Reports → Purchases by
+  supplier* shows what each one should cover), so the supplier debt and deductible VAT are in the books.
 - **Stock count**: the 504 products with stock history have no lots yet; count them, then enter lot and expiry,
   so the expiry board covers them.
 - **Encryption key**: copy `encryption_key` from `sites/erp.dermaroutine.ma/site_config.json` into a password

@@ -80,7 +80,7 @@ export function ReceivingList({ canReceive }: { canReceive: boolean }) {
                 <span className="grid min-w-0">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="truncate font-medium">{r.supplier_name}</span>
-                    {r.docstatus === 1 && !r.taxes_and_charges && (
+                    {r.docstatus === 1 && !r.vat_included && (
                       <Badge className="bg-warning text-warning-foreground">{t("noVat")}</Badge>
                     )}
                     {r.pp_corrects && <Badge variant="secondary">{t("correction")}</Badge>}

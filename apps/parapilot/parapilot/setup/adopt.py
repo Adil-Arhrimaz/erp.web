@@ -82,6 +82,7 @@ def adopt_company(company: str) -> dict:
 	till.save(ignore_permissions=True)
 
 	report["templates_disabled"] = disable_other_tax_templates(company, settings)
+	report["receipts_given_vat"], report["receipts_not_fixed"] = fix_receipts_without_vat(company)
 	report["groups_given_vat"] = set_vat_on_groups(settings["vat_template_standard"])
 	report["items_with_batches"] = enable_batches()
 	remove_unused_warehouses(company, abbr)
@@ -234,6 +235,74 @@ def adopt_records(company: str, abbr: str):
 				account_by_number(company, number),
 			)
 	_rename("POS Profile", STANDARD_TILL, DEFAULT_TILL)
+
+
+def fix_receipts_without_vat(company: str) -> tuple[int, list[str]]:
+	"""Delivery notes typed in ERPNext without VAT valued the stock VAT included. Each one not yet invoiced
+	is corrected the way an owner does it in ParaPilot: replaced at its own date with the VAT-included
+	purchase template, so the stock and the cost of everything sold since are valued without VAT.
+	Returns how many were fixed and why the others were not."""
+	from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import repost_entries
+
+	from parapilot.api.purchasing import receipt_has_vat
+
+	names = [
+		r.name
+		for r in frappe.get_all(
+			"Purchase Receipt",
+			filters={"company": company, "docstatus": 1, "is_return": 0},
+			fields=["name", "taxes_and_charges", "total_taxes_and_charges"],
+			order_by="posting_date asc, posting_time asc, creation asc",
+		)
+		if not receipt_has_vat(r.taxes_and_charges, r.total_taxes_and_charges)
+	]
+	# These corrections keep every quantity. Plain ERPNext allowed selling stock not yet received, so the
+	# history can hold a moment of negative stock that would refuse the cancellation; it is tolerated for
+	# this run only.
+	negative_allowed = frappe.db.get_single_value("Stock Settings", "allow_negative_stock")
+	frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
+	frappe.flags.pp_repost_at_end = True
+	try:
+		fixed, not_fixed = _correct_receipts(names)
+	finally:
+		frappe.db.set_single_value("Stock Settings", "allow_negative_stock", negative_allowed)
+		frappe.flags.pp_repost_at_end = False
+	# Recompute the cost of what was sold since, once, now rather than at the next hourly run.
+	restart_failed_reposts()
+	repost_entries()
+	return fixed, not_fixed
+
+
+def restart_failed_reposts():
+	"""Cost recalculations that failed (for instance two running at once) are queued again."""
+	for name in frappe.get_all("Repost Item Valuation", filters={"docstatus": 1, "status": "Failed"}, pluck="name"):
+		frappe.get_doc("Repost Item Valuation", name).restart_reposting()
+
+
+def _correct_receipts(names: list[str]) -> tuple[int, list[str]]:
+	from parapilot.api.purchasing import get_receipt_draft, submit_receipt
+
+	fixed, not_fixed = 0, []
+	for name in names:
+		frappe.db.savepoint("fix_receipt")
+		try:
+			draft = get_receipt_draft(correct=name)
+			submit_receipt(
+				{
+					"supplier": draft["supplier"],
+					"supplier_delivery_note": draft["supplier_delivery_note"],
+					"warehouse": draft["warehouse"],
+					"purchase_order": draft["purchase_order"],
+					"corrects": name,
+					"lines": draft["lines"],
+				}
+			)
+			fixed += 1
+		except frappe.ValidationError as e:
+			frappe.db.rollback(save_point="fix_receipt")
+			frappe.clear_messages()
+			not_fixed.append(f"{name}: {frappe.utils.strip_html(str(e))}")
+	return fixed, not_fixed
 
 
 def disable_other_tax_templates(company: str, settings: dict) -> list[str]:

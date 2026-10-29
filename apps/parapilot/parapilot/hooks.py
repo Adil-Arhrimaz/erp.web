@@ -12,6 +12,7 @@ after_install ="parapilot.setup.install.after_install"
 after_migrate = "parapilot.setup.install.after_migrate"
 
 _vat_category = "parapilot.validations.vat.validate_items_have_vat_category"
+_purchase_vat = "parapilot.validations.vat.add_purchase_vat"
 
 doc_events = {
 	"Company": {"validate": "parapilot.validations.legal_ids.validate_company"},
@@ -21,8 +22,9 @@ doc_events = {
 	"Sales Invoice": {"validate": _vat_category},
 	"POS Invoice": {"validate": _vat_category},
 	"Purchase Order": {"validate": _vat_category},
-	"Purchase Receipt": {"validate": _vat_category},
+	"Purchase Receipt": {"before_validate": _purchase_vat, "validate": _vat_category},
 	"Purchase Invoice": {
+		"before_validate": _purchase_vat,
 		"validate": [_vat_category, "parapilot.validations.legal_ids.warn_missing_company_ice"],
 	},
 }

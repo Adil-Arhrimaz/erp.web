@@ -317,10 +317,14 @@ def list_receipts(supplier: str | None = None) -> list[dict]:
 		"pp_damage_return",
 		"pp_corrects",
 		"taxes_and_charges",
+		"total_taxes_and_charges",
 	]
 	if can_see_costs():
 		fields.append("grand_total")
-	return frappe.get_list("Purchase Receipt", filters=filters, fields=fields, order_by="posting_date desc, creation desc", limit_page_length=200)
+	rows = frappe.get_list("Purchase Receipt", filters=filters, fields=fields, order_by="posting_date desc, creation desc", limit_page_length=200)
+	for r in rows:
+		r["vat_included"] = receipt_has_vat(r.pop("taxes_and_charges"), r.pop("total_taxes_and_charges"))
+	return rows
 
 
 @frappe.whitelist()
@@ -531,6 +535,12 @@ def submit_receipt(receipt: str | dict) -> dict:
 	return {"name": pr.name, "damage_return": pr.get("pp_damage_return"), "warnings": warnings}
 
 
+def receipt_has_vat(taxes_and_charges: str | None, vat: float) -> bool:
+	"""False for a delivery note typed in ERPNext without VAT (no template, or an old template that
+	charged none): its stock is valued VAT included. Exempt goods on ParaPilot's template count as with VAT."""
+	return bool(flt(vat)) or taxes_and_charges == get_settings().purchase_taxes_template
+
+
 def _receipt_invoices(name: str) -> list[str]:
 	return frappe.db.sql_list(
 		"""select distinct pi.name from `tabPurchase Invoice Item` pii
@@ -595,7 +605,7 @@ def _editor_lines(pr) -> list[dict]:
 				"rate": 0,
 			},
 		)
-		if row.is_free_item:
+		if row.is_free_item or not flt(row.rate):
 			line["free_qty"] += flt(row.qty)
 		else:
 			line["qty"] += flt(row.qty)
@@ -624,7 +634,10 @@ def _cancel_receipt(pr):
 
 
 def _repost_soon():
-	"""Recompute the cost of what was sold since the delivery now, rather than at the next hourly run."""
+	"""Recompute the cost of what was sold since the delivery now, rather than at the next hourly run.
+	A bulk run reposts once at the end instead: two reposts at once break each other."""
+	if frappe.flags.pp_repost_at_end:
+		return
 	frappe.enqueue(
 		"erpnext.stock.doctype.repost_item_valuation.repost_item_valuation.repost_entries",
 		queue="long",
@@ -657,7 +670,7 @@ def get_receipt(name: str) -> dict:
 		"status": pr.status,
 		"received_by": frappe.utils.get_fullname(pr.owner),
 		"warehouse": pr.set_warehouse or (pr.items[0].warehouse if pr.items else None),
-		"vat_included": bool(pr.taxes_and_charges),
+		"vat_included": receipt_has_vat(pr.taxes_and_charges, pr.total_taxes_and_charges),
 		"lines": lines,
 		"totals": _totals(pr) if show_costs else None,
 		"invoices": _receipt_invoices(pr.name),
